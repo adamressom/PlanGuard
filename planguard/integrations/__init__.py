@@ -1,0 +1,2 @@
+"""Authorized API integration boundaries."""
+

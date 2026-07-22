@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}PlanGuard — Study what matters{% endblock %}
+{% block content %}
+<section class="hero shell">
+  <div class="eyebrow"><span></span> Your workload, intelligently defended</div>
+  <h1>Stop guessing.<br><em>Study what matters.</em></h1>
+  <p>PlanGuard turns deadlines, difficulty, course weight, and your real availability into a focused plan that adapts when life happens.</p>
+  <div class="hero-actions"><a class="button" href="/dashboard">Build my plan <span>→</span></a><a class="text-link" href="#how">See the logic ↓</a></div>
+  <div class="signal-row"><span>01 Priority engine</span><span>02 Calendar-aware</span><span>03 Failure-proof sync</span></div>
+</section>
+<section class="preview shell" id="how">
+  <div class="preview-copy"><span class="kicker">Decision intelligence</span><h2>One clear next move.</h2><p>Not another list. PlanGuard weighs the work, protects focus time, and explains every recommendation.</p></div>
+  <div class="glass-card task-preview">
+    <div class="card-head"><span>NEXT UP</span><span class="live-dot">Live plan</span></div>
+    <div class="score-ring">87<small>priority</small></div>
+    <h3>Physics problem set</h3><p>PHYS 201 · Due tomorrow</p>
+    <div class="factor"><span>Difficulty</span><b>High</b></div><div class="factor"><span>Course impact</span><b>18%</b></div>
+    <a href="/dashboard">Start 50-minute focus block →</a>
+  </div>
+</section>
+{% endblock %}
+
