@@ -15,7 +15,8 @@ This repository is an intentionally lean hackathon scaffold: it runs, demonstrat
 - Google Calendar and Notion integration boundaries with cached fallback behavior
 - User registration with validation, secure password hashing, and session sign-in
 - Sign-in, sign-out, protected routes, and environment-aware session security
-- 32 unit, authentication, and route tests
+- User-scoped assignment and integration queries with non-revealing authorization errors
+- 41 unit, authentication, authorization, and route tests
 - Architecture diagram, Kanban board, and standup notes
 
 ## Quick start

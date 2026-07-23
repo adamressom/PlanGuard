@@ -6,12 +6,12 @@
   <div class="dash-grid">
     <section class="panel queue"><div class="panel-title"><div><span>PRIORITY QUEUE</span><h2>Your next moves</h2></div><span class="sync">● Synced</span></div>
       {% for item in assignments %}
-      <article class="task-row"><div class="rank">0{{ loop.index }}</div><div class="task-info"><small>{{ item.course }}</small><h3>{{ item.title }}</h3><div class="meter"><i style="width: {{ item.progress }}%"></i></div></div><div class="task-score"><b>{{ item.priority_score|int }}</b><span>score</span></div></article>
+      <article class="task-row"><div class="rank">0{{ loop.index }}</div><div class="task-info"><small>{{ item.course }}</small><h3><a href="{{ url_for('main.assignment_detail', assignment_id=item.id) }}">{{ item.title }}</a></h3><div class="meter"><i style="width: {{ item.progress }}%"></i></div></div><div class="task-score"><b>{{ item.priority_score|int }}</b><span>score</span></div></article>
       {% endfor %}
+      {% if not assignments %}<div class="empty-state"><h3>Your private queue is clear.</h3><p>Add an assignment to build your first ranked plan.</p></div>{% endif %}
     </section>
     <aside class="side-stack"><section class="panel focus"><span class="kicker">Recommended block</span><div class="timer">50:00</div><p>Physics problem set</p><button class="button ghost" data-focus>Begin focus</button></section><section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section></aside>
   </div>
 </section>
 <dialog id="task-dialog"><button class="dialog-close" aria-label="Close">×</button><span class="kicker">Quick capture</span><h2>Add an assignment</h2><p>The complete form arrives in the next build. This scaffold already has the data model ready.</p><button class="button dialog-close">Got it</button></dialog>
 {% endblock %}
-

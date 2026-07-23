@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ assignment.title }} — PlanGuard{% endblock %}
+{% block content %}
+<section class="dashboard shell">
+  <a class="text-link" href="{{ url_for('main.dashboard') }}">← Back to dashboard</a>
+  <article class="panel assignment-detail">
+    <span class="kicker">{{ assignment.course }}</span>
+    <h1>{{ assignment.title }}</h1>
+    <p>Due {{ assignment.deadline.strftime('%B %d at %I:%M %p') }}</p>
+    <div class="factor"><span>Difficulty</span><b>{{ assignment.difficulty }}/5</b></div>
+    <div class="factor"><span>Estimated time</span><b>{{ assignment.estimated_minutes }} minutes</b></div>
+    <div class="factor"><span>Course weight</span><b>{{ assignment.course_weight }}%</b></div>
+    <div class="factor"><span>Progress</span><b>{{ assignment.progress }}%</b></div>
+  </article>
+</section>
+{% endblock %}
