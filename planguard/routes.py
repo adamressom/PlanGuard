@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, render_template
 
+from .auth import login_required
 from .services.priority import rank_assignments
 
 main = Blueprint("main", __name__)
@@ -22,6 +23,7 @@ def landing():
 
 
 @main.get("/dashboard")
+@login_required
 def dashboard():
     assignments = rank_assignments(demo_assignments())
     return render_template("dashboard.html", assignments=assignments)
@@ -30,4 +32,3 @@ def dashboard():
 @main.get("/api/health")
 def health():
     return jsonify(status="ok", app="PlanGuard")
-

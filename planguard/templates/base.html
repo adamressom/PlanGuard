@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/signin.css') }}">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
@@ -27,7 +28,7 @@
         </div>
       </details>
       {% else %}
-      <a class="button small" href="{{ url_for('auth.register') }}">Create account</a>
+      <a href="{{ url_for('auth.login') }}">Sign in</a><a class="button small" href="{{ url_for('auth.register') }}">Create account</a>
       {% endif %}
     </nav>
   </header>

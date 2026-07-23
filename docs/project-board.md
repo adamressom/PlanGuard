@@ -10,7 +10,6 @@
 
 ## Ready
 
-- [ ] User login
 - [ ] Assignment create/edit/delete flow
 - [ ] Google Calendar OAuth implementation
 - [ ] Notion OAuth implementation
@@ -29,3 +28,4 @@
 - [x] Integration fallback contract
 - [x] Initial test suite
 - [x] User registration with validation and secure password hashing
+- [x] Sign-in, sign-out, protected routes, and secure sessions
