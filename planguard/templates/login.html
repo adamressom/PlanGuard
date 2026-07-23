@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Sign in — PlanGuard{% endblock %}
+{% block content %}
+<section class="auth-shell shell">
+  <div class="auth-intro">
+    <span class="eyebrow"><span></span>Welcome back</span>
+    <h1>Return to<br><em>your momentum.</em></h1>
+    <p>Your private workspace is ready with the priorities, progress, and study plan you left behind.</p>
+    <div class="privacy-note"><b>Secure session</b><span>Your sign-in is protected with an HTTP-only session cookie and expires automatically.</span></div>
+  </div>
+  <div class="panel auth-card">
+    <span class="kicker">Student workspace</span>
+    <h2>Sign in</h2>
+    <p class="auth-subtitle">Pick up exactly where you left off.</p>
+    {% if error %}<div class="form-error" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" novalidate>
+      {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" required autofocus>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button class="button auth-submit" type="submit">Sign in <span>→</span></button>
+    </form>
+    <p class="auth-switch">New to PlanGuard? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+  </div>
+</section>
+{% endblock %}

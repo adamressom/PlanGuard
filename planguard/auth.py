@@ -1,13 +1,17 @@
 import re
+from functools import wraps
+from urllib.parse import urlsplit
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 from sqlalchemy.exc import IntegrityError
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import db
 from .models import User
 
 auth = Blueprint("auth", __name__)
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+DUMMY_PASSWORD_HASH = generate_password_hash("not-a-real-user-password")
 
 
 @auth.before_app_request
@@ -16,6 +20,25 @@ def load_signed_in_user():
     g.user = db.session.get(User, user_id) if user_id is not None else None
     if user_id is not None and g.user is None:
         session.clear()
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None:
+            return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+        return view(**kwargs)
+
+    return wrapped_view
+
+
+def safe_next_url(candidate):
+    if not candidate:
+        return None
+    parsed = urlsplit(candidate)
+    if parsed.scheme or parsed.netloc or not candidate.startswith("/"):
+        return None
+    return candidate
 
 
 def validate_registration(email, display_name, password):
@@ -67,7 +90,33 @@ def register():
     return render_template("register.html", errors=errors, form_data=form_data)
 
 
+@auth.route("/login", methods=("GET", "POST"))
+def login():
+    if g.user is not None:
+        return redirect(url_for("main.dashboard"))
+
+    error = None
+    email = ""
+    next_url = safe_next_url(request.values.get("next"))
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        user = db.session.scalar(db.select(User).where(User.email == email))
+        password_matches = check_password_hash(user.password_hash if user else DUMMY_PASSWORD_HASH, password)
+
+        if user is None or not password_matches:
+            error = "Email or password is incorrect."
+        else:
+            session.clear()
+            session.permanent = True
+            session["user_id"] = user.id
+            return redirect(next_url or url_for("main.dashboard"))
+
+    return render_template("login.html", error=error, email=email, next_url=next_url)
+
+
 @auth.post("/logout")
 def logout():
     session.clear()
+    flash("You have been signed out.", "success")
     return redirect(url_for("main.landing"))
