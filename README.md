@@ -13,7 +13,8 @@ This repository is an intentionally lean hackathon scaffold: it runs, demonstrat
 - Explainable priority-scoring engine
 - Landing page and interactive dashboard prototype
 - Google Calendar and Notion integration boundaries with cached fallback behavior
-- 10 unit and route tests
+- User registration with validation, secure password hashing, and session sign-in
+- 18 unit, authentication, and route tests
 - Architecture diagram, Kanban board, and standup notes
 
 ## Quick start

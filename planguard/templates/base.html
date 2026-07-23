@@ -9,15 +9,32 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <header class="nav shell">
     <a class="brand" href="/"><span class="brand-mark">P</span>PlanGuard</a>
-    <nav><a href="/dashboard">Dashboard</a><a href="#how">How it works</a><a class="button small" href="/dashboard">Try demo</a></nav>
+    <nav>
+      <a href="/dashboard">Dashboard</a><a href="/#how">How it works</a>
+      {% if g.user %}
+      <details class="account-menu">
+        <summary class="avatar" aria-label="Open account menu for {{ g.user.display_name }}">{{ g.user.initials }}</summary>
+        <div class="account-popover">
+          <div class="account-identity"><span class="avatar avatar-small">{{ g.user.initials }}</span><div><b>{{ g.user.display_name }}</b><small>{{ g.user.email }}</small></div></div>
+          <a href="/dashboard">Dashboard</a>
+          <form method="post" action="{{ url_for('auth.logout') }}"><button type="submit">Log out</button></form>
+        </div>
+      </details>
+      {% else %}
+      <a class="button small" href="{{ url_for('auth.register') }}">Create account</a>
+      {% endif %}
+    </nav>
   </header>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}<div class="flash-stack shell">{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+  {% endwith %}
   <main>{% block content %}{% endblock %}</main>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
-

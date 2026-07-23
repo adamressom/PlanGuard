@@ -19,10 +19,11 @@ def create_app(test_config=None):
     db.init_app(app)
 
     from .routes import main
+    from .auth import auth
     app.register_blueprint(main)
+    app.register_blueprint(auth)
 
     with app.app_context():
         db.create_all()
 
     return app
-
