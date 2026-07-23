@@ -9,8 +9,10 @@
     <p>Due {{ assignment.deadline.strftime('%B %d at %I:%M %p') }}</p>
     <div class="factor"><span>Difficulty</span><b>{{ assignment.difficulty }}/5</b></div>
     <div class="factor"><span>Estimated time</span><b>{{ assignment.estimated_minutes }} minutes</b></div>
-    <div class="factor"><span>Course weight</span><b>{{ assignment.course_weight }}%</b></div>
+    <div class="factor"><span>Course impact</span><b>{{ assignment.course_impact }}%</b></div>
     <div class="factor"><span>Progress</span><b>{{ assignment.progress }}%</b></div>
+    <div class="factor"><span>Status</span><b>{{ 'Completed' if assignment.completed else 'In progress' }}</b></div>
+    {% if assignment.notes %}<div class="assignment-notes"><span class="kicker">Notes</span><p>{{ assignment.notes }}</p></div>{% endif %}
   </article>
 </section>
 {% endblock %}

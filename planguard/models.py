@@ -40,7 +40,13 @@ class Assignment(db.Model):
     course_weight = db.Column(db.Float, nullable=False, default=10)
     progress = db.Column(db.Integer, nullable=False, default=0)
     completed = db.Column(db.Boolean, nullable=False, default=False)
+    notes = db.Column(db.Text, nullable=False, default="")
+    provider_id = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    @property
+    def course_impact(self):
+        return self.course_weight
 
 
 class IntegrationState(db.Model):

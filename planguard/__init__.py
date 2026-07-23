@@ -3,8 +3,28 @@ from datetime import timedelta
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect, text
 
 db = SQLAlchemy()
+
+
+def apply_schema_updates():
+    """Apply small, additive SQLite updates while the project is pre-migrations."""
+    inspector = inspect(db.engine)
+    if "assignment" not in inspector.get_table_names():
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("assignment")}
+    statements = []
+    if "notes" not in columns:
+        statements.append("ALTER TABLE assignment ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+    if "provider_id" not in columns:
+        statements.append("ALTER TABLE assignment ADD COLUMN provider_id VARCHAR(255)")
+
+    if statements:
+        with db.engine.begin() as connection:
+            for statement in statements:
+                connection.execute(text(statement))
 
 
 def create_app(test_config=None):
@@ -35,5 +55,6 @@ def create_app(test_config=None):
 
     with app.app_context():
         db.create_all()
+        apply_schema_updates()
 
     return app
