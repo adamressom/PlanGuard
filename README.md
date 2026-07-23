@@ -17,7 +17,9 @@ This repository is an intentionally lean hackathon scaffold: it runs, demonstrat
 - Sign-in, sign-out, protected routes, and environment-aware session security
 - User-scoped assignment and integration queries with non-revealing authorization errors
 - Database-backed assignment form with ranking inputs and validation
-- 50 unit, authentication, authorization, assignment, and route tests
+- Assignment editing with shared validation and immediate priority recalculation
+- Confirmed assignment deletion from the dashboard and detail view
+- 62 unit, authentication, authorization, assignment, and route tests
 - Architecture diagram, Kanban board, and standup notes
 
 ## Quick start

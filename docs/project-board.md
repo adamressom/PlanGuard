@@ -31,3 +31,5 @@
 - [x] Sign-in, sign-out, protected routes, and secure sessions
 - [x] Cross-user data isolation for assignments and integrations
 - [x] Database-backed assignment creation and validation
+- [x] Ownership-protected assignment editing and live re-ranking
+- [x] Confirmed, ownership-protected assignment deletion

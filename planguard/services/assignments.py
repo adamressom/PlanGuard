@@ -80,3 +80,18 @@ def create_assignment(user_id, data):
     db.session.add(assignment)
     db.session.commit()
     return assignment, {}
+
+
+def update_assignment(assignment, data):
+    values, errors = validate_assignment(data)
+    if errors:
+        return None, errors
+    for field, value in values.items():
+        setattr(assignment, field, value)
+    db.session.commit()
+    return assignment, {}
+
+
+def remove_assignment(assignment):
+    db.session.delete(assignment)
+    db.session.commit()
