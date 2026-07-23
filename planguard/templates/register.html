@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Create your account — PlanGuard{% endblock %}
+{% block content %}
+<section class="auth-shell shell">
+  <div class="auth-intro">
+    <span class="eyebrow"><span></span>Start your protected plan</span>
+    <h1>Your work.<br><em>Your momentum.</em></h1>
+    <p>Create a private workspace where PlanGuard can rank assignments, protect study time, and remember your progress.</p>
+    <div class="privacy-note"><b>Private by design</b><span>Your password is securely hashed and never stored as readable text.</span></div>
+  </div>
+  <div class="panel auth-card">
+    <span class="kicker">Student account</span>
+    <h2>Create your account</h2>
+    <p class="auth-subtitle">Three fields. One much calmer semester.</p>
+    <form method="post" novalidate>
+      <label for="display_name">Display name</label>
+      <input id="display_name" name="display_name" autocomplete="name" maxlength="120" value="{{ form_data.display_name }}" aria-describedby="display-name-error" required>
+      {% if errors.display_name %}<span class="field-error" id="display-name-error">{{ errors.display_name }}</span>{% endif %}
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" autocomplete="email" value="{{ form_data.email }}" aria-describedby="email-error" required>
+      {% if errors.email %}<span class="field-error" id="email-error">{{ errors.email }}</span>{% endif %}
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" aria-describedby="password-help password-error" required>
+      <span class="field-help" id="password-help">Use at least 8 characters.</span>
+      {% if errors.password %}<span class="field-error" id="password-error">{{ errors.password }}</span>{% endif %}
+      <button class="button auth-submit" type="submit">Create my workspace <span>→</span></button>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from werkzeug.security import check_password_hash, generate_password_hash
+
 from . import db
 
 
@@ -7,8 +9,24 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
     display_name = db.Column(db.String(120), nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     assignments = db.relationship("Assignment", backref="owner", lazy=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def initials(self):
+        words = self.display_name.split()
+        if not words:
+            return "?"
+        if len(words) == 1:
+            return words[0][:2].upper()
+        return f"{words[0][0]}{words[1][0]}".upper()
 
 
 class Assignment(db.Model):
@@ -33,4 +51,3 @@ class IntegrationState(db.Model):
     last_synced_at = db.Column(db.DateTime)
     retry_count = db.Column(db.Integer, nullable=False, default=0)
     cached_payload = db.Column(db.JSON)
-
