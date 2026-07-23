@@ -30,3 +30,4 @@
 - [x] User registration with validation and secure password hashing
 - [x] Sign-in, sign-out, protected routes, and secure sessions
 - [x] Cross-user data isolation for assignments and integrations
+- [x] Database-backed assignment creation and validation

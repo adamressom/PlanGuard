@@ -2,7 +2,7 @@
 {% block title %}Command Center — PlanGuard{% endblock %}
 {% block content %}
 <section class="dashboard shell">
-  <div class="dash-heading"><div><span class="kicker">Tuesday's command center</span><h1>Protect your momentum.</h1></div><button class="button" data-add-task>+ Add assignment</button></div>
+  <div class="dash-heading"><div><span class="kicker">Tuesday's command center</span><h1>Protect your momentum.</h1></div><a class="button" href="{{ url_for('main.new_assignment') }}">+ Add assignment</a></div>
   <div class="dash-grid">
     <section class="panel queue"><div class="panel-title"><div><span>PRIORITY QUEUE</span><h2>Your next moves</h2></div><span class="sync">● Synced</span></div>
       {% for item in assignments %}

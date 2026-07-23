@@ -1,8 +1,9 @@
-from flask import Blueprint, abort, jsonify, render_template, request
+from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
 
 from . import db
 from .auth import api_login_required, login_required
 from .models import Assignment, IntegrationState
+from .services.assignments import create_assignment
 from .services.ownership import get_owned_record, owned_records
 from .services.priority import rank_assignments
 
@@ -17,9 +18,11 @@ def assignment_payload(assignment):
         "deadline": assignment.deadline.isoformat(),
         "difficulty": assignment.difficulty,
         "estimated_minutes": assignment.estimated_minutes,
-        "course_weight": assignment.course_weight,
+        "course_impact": assignment.course_impact,
         "progress": assignment.progress,
         "completed": assignment.completed,
+        "notes": assignment.notes,
+        "provider_id": assignment.provider_id,
     }
 
 
@@ -60,6 +63,21 @@ def dashboard():
         for item in records
     ])
     return render_template("dashboard.html", assignments=assignments)
+
+
+@main.route("/assignments/new", methods=("GET", "POST"))
+@login_required
+def new_assignment():
+    errors = {}
+    form_data = {}
+    if request.method == "POST":
+        form_data = request.form.to_dict()
+        assignment, errors = create_assignment(g.user.id, request.form)
+        if assignment:
+            flash(f'"{assignment.title}" was added to your plan.', "success")
+            return redirect(url_for("main.dashboard"))
+    status = 400 if errors else 200
+    return render_template("assignment_form.html", errors=errors, form_data=form_data), status
 
 
 @main.get("/assignments/<int:assignment_id>")
