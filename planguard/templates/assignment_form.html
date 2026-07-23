@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Add an assignment — PlanGuard{% endblock %}
+{% block title %}{{ 'Edit assignment' if mode == 'edit' else 'Add an assignment' }} — PlanGuard{% endblock %}
 {% block content %}
 <section class="form-page shell">
   <div class="form-heading">
     <a class="text-link" href="{{ url_for('main.dashboard') }}">← Back to dashboard</a>
-    <span class="kicker">New assignment</span>
-    <h1>Give PlanGuard<br><em>the full picture.</em></h1>
-    <p>Every factor helps the priority engine decide what deserves your attention first.</p>
+    <span class="kicker">{{ 'Update assignment' if mode == 'edit' else 'New assignment' }}</span>
+    <h1>{% if mode == 'edit' %}Keep your plan<br><em>accurate.</em>{% else %}Give PlanGuard<br><em>the full picture.</em>{% endif %}</h1>
+    <p>{% if mode == 'edit' %}Changes will immediately reshape your priority queue.{% else %}Every factor helps the priority engine decide what deserves your attention first.{% endif %}</p>
   </div>
   <form class="panel assignment-form" method="post" novalidate>
     <div class="form-section-title"><span>01</span><div><b>The work</b><small>What needs to get done?</small></div></div>
@@ -28,7 +28,7 @@
       <div class="field"><label for="provider_id">Provider ID <small>Optional</small></label><input id="provider_id" name="provider_id" maxlength="255" placeholder="Notion or Calendar item ID" value="{{ form_data.get('provider_id', '') }}">{% if errors.provider_id %}<span class="field-error">{{ errors.provider_id }}</span>{% endif %}</div>
     </div>
     <label class="check-field"><input name="completed" type="checkbox" {% if form_data.get('completed') %}checked{% endif %}><span><b>Already completed</b><small>Keep it in your history without prioritizing it.</small></span></label>
-    <div class="form-actions"><a class="text-link" href="{{ url_for('main.dashboard') }}">Cancel</a><button class="button" type="submit">Add to my plan <span>→</span></button></div>
+    <div class="form-actions"><a class="text-link" href="{{ url_for('main.dashboard') }}">Cancel</a><button class="button" type="submit">{{ 'Save changes' if mode == 'edit' else 'Add to my plan' }} <span>→</span></button></div>
   </form>
 </section>
 {% endblock %}

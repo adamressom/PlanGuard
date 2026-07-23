@@ -3,7 +3,7 @@ from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template
 from . import db
 from .auth import api_login_required, login_required
 from .models import Assignment, IntegrationState
-from .services.assignments import create_assignment
+from .services.assignments import create_assignment, remove_assignment, update_assignment as save_assignment_updates
 from .services.ownership import get_owned_record, owned_records
 from .services.priority import rank_assignments
 
@@ -77,7 +77,50 @@ def new_assignment():
             flash(f'"{assignment.title}" was added to your plan.', "success")
             return redirect(url_for("main.dashboard"))
     status = 400 if errors else 200
-    return render_template("assignment_form.html", errors=errors, form_data=form_data), status
+    return render_template("assignment_form.html", errors=errors, form_data=form_data, mode="create"), status
+
+
+@main.route("/assignments/<int:assignment_id>/edit", methods=("GET", "POST"))
+@login_required
+def edit_assignment(assignment_id):
+    assignment = get_owned_record(Assignment, assignment_id)
+    if assignment is None:
+        abort(404)
+
+    errors = {}
+    if request.method == "POST":
+        form_data = request.form.to_dict()
+        updated, errors = save_assignment_updates(assignment, request.form)
+        if updated:
+            flash(f'"{updated.title}" was updated.', "success")
+            return redirect(url_for("main.dashboard"))
+        return render_template("assignment_form.html", assignment=assignment, errors=errors, form_data=form_data, mode="edit"), 400
+
+    form_data = {
+        "title": assignment.title,
+        "course": assignment.course,
+        "deadline": assignment.deadline.strftime("%Y-%m-%dT%H:%M"),
+        "difficulty": assignment.difficulty,
+        "estimated_minutes": assignment.estimated_minutes,
+        "course_impact": assignment.course_impact,
+        "progress": assignment.progress,
+        "completed": assignment.completed,
+        "notes": assignment.notes,
+        "provider_id": assignment.provider_id or "",
+    }
+    return render_template("assignment_form.html", assignment=assignment, errors=errors, form_data=form_data, mode="edit")
+
+
+@main.post("/assignments/<int:assignment_id>/delete")
+@login_required
+def delete_assignment_page(assignment_id):
+    assignment = get_owned_record(Assignment, assignment_id)
+    if assignment is None:
+        abort(404)
+    title = assignment.title
+    remove_assignment(assignment)
+    flash(f'"{title}" was deleted from your plan.', "success")
+    return redirect(url_for("main.dashboard"))
 
 
 @main.get("/assignments/<int:assignment_id>")

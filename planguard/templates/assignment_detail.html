@@ -2,7 +2,7 @@
 {% block title %}{{ assignment.title }} — PlanGuard{% endblock %}
 {% block content %}
 <section class="dashboard shell">
-  <a class="text-link" href="{{ url_for('main.dashboard') }}">← Back to dashboard</a>
+  <div class="detail-nav"><a class="text-link" href="{{ url_for('main.dashboard') }}">← Back to dashboard</a><div class="detail-actions"><a class="button small" href="{{ url_for('main.edit_assignment', assignment_id=assignment.id) }}">Edit assignment</a><button class="detail-delete" type="button" data-delete-open data-delete-name="{{ assignment.title }}" data-delete-url="{{ url_for('main.delete_assignment_page', assignment_id=assignment.id) }}">Delete assignment</button></div></div>
   <article class="panel assignment-detail">
     <span class="kicker">{{ assignment.course }}</span>
     <h1>{{ assignment.title }}</h1>
@@ -15,4 +15,5 @@
     {% if assignment.notes %}<div class="assignment-notes"><span class="kicker">Notes</span><p>{{ assignment.notes }}</p></div>{% endif %}
   </article>
 </section>
+{% include "_delete_dialog.html" %}
 {% endblock %}
