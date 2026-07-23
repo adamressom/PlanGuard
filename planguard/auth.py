@@ -32,6 +32,16 @@ def login_required(view):
     return wrapped_view
 
 
+def api_login_required(view):
+    @wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None:
+            return {"error": "Authentication required."}, 401
+        return view(**kwargs)
+
+    return wrapped_view
+
+
 def safe_next_url(candidate):
     if not candidate:
         return None
