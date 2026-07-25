@@ -22,7 +22,8 @@ This repository is an intentionally lean hackathon scaffold: it runs, demonstrat
 - Inline progress updates, completion controls, and active/completed queues
 - Deterministic database priority queue with top-pick and overdue states
 - Account-level study availability with presets and time-fit explanations
-- 99 unit, authentication, authorization, assignment, progress, ranking, availability, and route tests
+- Per-assignment score breakdowns with deterministic plain-language explanations
+- 109 unit, authentication, authorization, assignment, progress, ranking, availability, explanation, and route tests
 - Architecture diagram, Kanban board, and standup notes
 
 ## Quick start
