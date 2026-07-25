@@ -5,7 +5,7 @@ from .auth import api_login_required, login_required
 from .models import Assignment, IntegrationState
 from .services.assignments import create_assignment, remove_assignment, set_assignment_status, update_assignment as save_assignment_updates
 from .services.ownership import get_owned_record, owned_records
-from .services.priority import rank_assignments
+from .services.priority import assignment_priority_input, rank_assignments
 
 main = Blueprint("main", __name__)
 
@@ -48,24 +48,16 @@ def landing():
 @main.get("/dashboard")
 @login_required
 def dashboard():
-    records = db.session.scalars(owned_records(Assignment)).all()
-    active_assignments = rank_assignments([
-        {
-            "id": item.id,
-            "title": item.title,
-            "course": item.course,
-            "deadline": item.deadline,
-            "difficulty": item.difficulty,
-            "estimated_minutes": item.estimated_minutes,
-            "course_weight": item.course_weight,
-            "progress": item.progress,
-        }
-        for item in records if not item.completed
-    ])
-    completed_assignments = sorted(
-        (item for item in records if item.completed),
-        key=lambda item: item.deadline,
-        reverse=True,
+    active_records = db.session.scalars(
+        owned_records(Assignment).where(Assignment.completed.is_(False))
+    ).all()
+    completed_assignments = db.session.scalars(
+        owned_records(Assignment)
+        .where(Assignment.completed.is_(True))
+        .order_by(Assignment.deadline.desc())
+    ).all()
+    active_assignments = rank_assignments(
+        [assignment_priority_input(item) for item in active_records]
     )
     return render_template(
         "dashboard.html",

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from planguard.services.priority import calculate_priority, rank_assignments
+from planguard.services.priority import calculate_priority, deadline_metadata, rank_assignments
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -43,3 +43,34 @@ def test_naive_deadline_is_supported():
     score = calculate_priority(task(deadline=datetime(2026, 1, 2)), now=NOW)
     assert isinstance(score, float)
 
+
+def test_missing_and_malformed_values_do_not_crash_ranking():
+    malformed = {"id": 1, "title": "Edge case", "deadline": None, "difficulty": None, "estimated_minutes": "unknown", "course_weight": float("nan"), "progress": "missing"}
+    ranked = rank_assignments([malformed], available_minutes="invalid", now=NOW)
+    assert 0 <= ranked[0]["priority_score"] <= 100
+    assert ranked[0]["deadline_status"] == "missing"
+    assert ranked[0]["due_label"] == "No deadline"
+
+
+def test_overdue_assignment_gets_clear_metadata_and_bonus():
+    overdue = task(deadline=NOW - timedelta(days=2))
+    due_now = task(deadline=NOW)
+    ranked = rank_assignments([due_now, overdue], now=NOW)
+    assert ranked[0]["is_overdue"] is True
+    assert ranked[0]["deadline_status"] == "overdue"
+    assert ranked[0]["due_label"] == "Overdue by 2d"
+    assert ranked[0]["priority_score"] > ranked[1]["priority_score"]
+
+
+def test_equal_scores_use_deadline_then_id_as_deterministic_tiebreakers():
+    later = task(id=2, title="Later", deadline=NOW + timedelta(days=11))
+    earlier = task(id=3, title="Earlier", deadline=NOW + timedelta(days=10))
+    same_deadline_lower_id = task(id=1, title="Lower ID", deadline=NOW + timedelta(days=10))
+    ranked = rank_assignments([later, earlier, same_deadline_lower_id], now=NOW)
+    assert len({item["priority_score"] for item in ranked}) == 1
+    assert [item["id"] for item in ranked] == [1, 3, 2]
+
+
+def test_deadline_metadata_handles_near_deadline_without_rounding_to_zero():
+    metadata = deadline_metadata(NOW + timedelta(minutes=20), NOW)
+    assert metadata["due_label"] == "Due in less than 1 hour"

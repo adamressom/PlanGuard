@@ -34,3 +34,4 @@
 - [x] Ownership-protected assignment editing and live re-ranking
 - [x] Confirmed, ownership-protected assignment deletion
 - [x] Inline progress tracking and separate completed-work queue
+- [x] Resilient database-backed priority queue with overdue handling
