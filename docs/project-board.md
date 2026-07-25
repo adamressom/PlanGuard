@@ -37,3 +37,4 @@
 - [x] Resilient database-backed priority queue with overdue handling
 - [x] Account-persisted study availability and time-fit recommendations
 - [x] Deterministic five-factor priority explanations on every active task
+- [x] Persistent focus-session timer with pause, resume, end, and refresh recovery
