@@ -30,6 +30,22 @@
               <div class="progress-input-row"><input id="progress-{{ item.id }}" name="progress" type="range" min="0" max="100" value="{{ item.progress }}" data-progress-input><button type="submit" name="action" value="save_progress">Save</button><button class="complete-button" type="submit" name="action" value="mark_complete">✓ Mark complete</button></div>
             </form>
             <div class="meter"><i style="width: {{ item.progress }}%"></i></div>
+            <details class="score-explanation">
+              <summary aria-controls="score-details-{{ item.id }}"><span class="explain-icon" aria-hidden="true">?</span>Why this score?<span class="explain-chevron" aria-hidden="true">⌄</span></summary>
+              <div class="explanation-body" id="score-details-{{ item.id }}" role="region" aria-label="Priority explanation for {{ item.title }}">
+                <div class="explanation-heading"><div><span class="score-band {{ item.priority_band }}">{{ item.priority_band }} priority</span><h4>{{ item.priority_score|int }} out of 100</h4></div><p>{{ item.priority_explanation }}</p></div>
+                <div class="factor-list">
+                  {% for factor in item.score_factors %}
+                  <div class="factor-row {{ factor.key }}">
+                    <div class="factor-heading"><div><b>{{ factor.label }}</b><span>{{ factor.value }}</span></div><strong class="factor-points{% if factor.points < 0 %} negative{% endif %}">{{ '+' if factor.points > 0 else '' }}{{ factor.points }}</strong></div>
+                    <div class="factor-track" aria-hidden="true"><i style="width: {{ factor.percent }}%"></i></div>
+                    <p>{{ factor.explanation }}</p>
+                  </div>
+                  {% endfor %}
+                </div>
+                <p class="formula-note">Score = deadline + difficulty + course impact + time fit − progress reduction, capped from 0–100.</p>
+              </div>
+            </details>
           </div>
           <div class="task-score"><b>{{ item.priority_score|int }}</b><span>score</span></div>
         </article>

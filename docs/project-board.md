@@ -36,3 +36,4 @@
 - [x] Inline progress tracking and separate completed-work queue
 - [x] Resilient database-backed priority queue with overdue handling
 - [x] Account-persisted study availability and time-fit recommendations
+- [x] Deterministic five-factor priority explanations on every active task
