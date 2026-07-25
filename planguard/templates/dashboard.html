@@ -4,15 +4,48 @@
 <section class="dashboard shell">
   <div class="dash-heading"><div><span class="kicker">Tuesday's command center</span><h1>Protect your momentum.</h1></div><a class="button" href="{{ url_for('main.new_assignment') }}">+ Add assignment</a></div>
   <div class="dash-grid">
-    <section class="panel queue"><div class="panel-title"><div><span>PRIORITY QUEUE</span><h2>Your next moves</h2></div><span class="sync">● Synced</span></div>
-      {% for item in assignments %}
-      <article class="task-row"><div class="rank">0{{ loop.index }}</div><div class="task-info"><small>{{ item.course }}</small><div class="task-title-line"><h3><a href="{{ url_for('main.assignment_detail', assignment_id=item.id) }}">{{ item.title }}</a></h3><div class="task-actions"><a class="edit-link" href="{{ url_for('main.edit_assignment', assignment_id=item.id) }}" aria-label="Edit {{ item.title }}"><span aria-hidden="true">✎</span> Edit</a><button class="delete-link" type="button" data-delete-open data-delete-name="{{ item.title }}" data-delete-url="{{ url_for('main.delete_assignment_page', assignment_id=item.id) }}" aria-label="Delete {{ item.title }}"><span aria-hidden="true">×</span> Delete</button></div></div><div class="meter"><i style="width: {{ item.progress }}%"></i></div></div><div class="task-score"><b>{{ item.priority_score|int }}</b><span>score</span></div></article>
-      {% endfor %}
-      {% if not assignments %}<div class="empty-state"><h3>Your private queue is clear.</h3><p>Add an assignment to build your first ranked plan.</p></div>{% endif %}
-    </section>
-    <aside class="side-stack"><section class="panel focus"><span class="kicker">Recommended block</span><div class="timer">50:00</div><p>Physics problem set</p><button class="button ghost" data-focus>Begin focus</button></section><section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section></aside>
+    <div class="queue-stack">
+      <section class="panel queue">
+        <div class="panel-title"><div><span>ACTIVE PRIORITY QUEUE</span><h2>Your next moves</h2></div><span class="sync">● Synced</span></div>
+        {% for item in assignments %}
+        <article class="task-row">
+          <div class="rank">{{ '%02d'|format(loop.index) }}</div>
+          <div class="task-info">
+            <small>{{ item.course }}</small>
+            <div class="task-title-line">
+              <h3><a href="{{ url_for('main.assignment_detail', assignment_id=item.id) }}">{{ item.title }}</a></h3>
+              <div class="task-actions"><a class="edit-link" href="{{ url_for('main.edit_assignment', assignment_id=item.id) }}" aria-label="Edit {{ item.title }}"><span aria-hidden="true">✎</span> Edit</a><button class="delete-link" type="button" data-delete-open data-delete-name="{{ item.title }}" data-delete-url="{{ url_for('main.delete_assignment_page', assignment_id=item.id) }}" aria-label="Delete {{ item.title }}"><span aria-hidden="true">×</span> Delete</button></div>
+            </div>
+            <form class="progress-form" method="post" action="{{ url_for('main.update_assignment_progress', assignment_id=item.id) }}">
+              <label for="progress-{{ item.id }}">Progress <output data-progress-output>{{ item.progress }}%</output></label>
+              <div class="progress-input-row"><input id="progress-{{ item.id }}" name="progress" type="range" min="0" max="100" value="{{ item.progress }}" data-progress-input><button type="submit" name="action" value="save_progress">Save</button><button class="complete-button" type="submit" name="action" value="mark_complete">✓ Mark complete</button></div>
+            </form>
+            <div class="meter"><i style="width: {{ item.progress }}%"></i></div>
+          </div>
+          <div class="task-score"><b>{{ item.priority_score|int }}</b><span>score</span></div>
+        </article>
+        {% endfor %}
+        {% if not assignments %}<div class="empty-state"><h3>Your active queue is clear.</h3><p>Add an assignment or review your completed work below.</p></div>{% endif %}
+      </section>
+
+      <section class="panel completed-queue">
+        <div class="panel-title"><div><span>COMPLETED</span><h2>Finished work</h2></div><span class="completed-count">{{ completed_assignments|length }}</span></div>
+        {% for item in completed_assignments %}
+        <article class="completed-row">
+          <div class="completed-check">✓</div>
+          <div><small>{{ item.course }}</small><h3><a href="{{ url_for('main.assignment_detail', assignment_id=item.id) }}">{{ item.title }}</a></h3><span>{{ item.progress }}% progress</span></div>
+          <form method="post" action="{{ url_for('main.update_assignment_progress', assignment_id=item.id) }}"><button type="submit" name="action" value="mark_incomplete">Mark incomplete</button></form>
+        </article>
+        {% endfor %}
+        {% if not completed_assignments %}<p class="completed-empty">Completed assignments will move here.</p>{% endif %}
+      </section>
+    </div>
+
+    <aside class="side-stack">
+      <section class="panel focus"><span class="kicker">Recommended block</span><div class="timer">50:00</div><p>{{ recommended.title if recommended else 'Your active queue is clear' }}</p><button class="button ghost" data-focus {% if not recommended %}disabled{% endif %}>Begin focus</button></section>
+      <section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section>
+    </aside>
   </div>
 </section>
-<dialog id="task-dialog"><button class="dialog-close" aria-label="Close">×</button><span class="kicker">Quick capture</span><h2>Add an assignment</h2><p>The complete form arrives in the next build. This scaffold already has the data model ready.</p><button class="button dialog-close">Got it</button></dialog>
 {% include "_delete_dialog.html" %}
 {% endblock %}

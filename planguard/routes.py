@@ -3,7 +3,7 @@ from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template
 from . import db
 from .auth import api_login_required, login_required
 from .models import Assignment, IntegrationState
-from .services.assignments import create_assignment, remove_assignment, update_assignment as save_assignment_updates
+from .services.assignments import create_assignment, remove_assignment, set_assignment_status, update_assignment as save_assignment_updates
 from .services.ownership import get_owned_record, owned_records
 from .services.priority import rank_assignments
 
@@ -49,7 +49,7 @@ def landing():
 @login_required
 def dashboard():
     records = db.session.scalars(owned_records(Assignment)).all()
-    assignments = rank_assignments([
+    active_assignments = rank_assignments([
         {
             "id": item.id,
             "title": item.title,
@@ -60,9 +60,19 @@ def dashboard():
             "course_weight": item.course_weight,
             "progress": item.progress,
         }
-        for item in records
+        for item in records if not item.completed
     ])
-    return render_template("dashboard.html", assignments=assignments)
+    completed_assignments = sorted(
+        (item for item in records if item.completed),
+        key=lambda item: item.deadline,
+        reverse=True,
+    )
+    return render_template(
+        "dashboard.html",
+        assignments=active_assignments,
+        completed_assignments=completed_assignments,
+        recommended=active_assignments[0] if active_assignments else None,
+    )
 
 
 @main.route("/assignments/new", methods=("GET", "POST"))
@@ -120,6 +130,40 @@ def delete_assignment_page(assignment_id):
     title = assignment.title
     remove_assignment(assignment)
     flash(f'"{title}" was deleted from your plan.', "success")
+    return redirect(url_for("main.dashboard"))
+
+
+@main.post("/assignments/<int:assignment_id>/progress")
+@login_required
+def update_assignment_progress(assignment_id):
+    assignment = get_owned_record(Assignment, assignment_id)
+    if assignment is None:
+        abort(404)
+
+    action = request.form.get("action", "save_progress")
+    if action == "mark_complete":
+        updated, errors = set_assignment_status(assignment, progress=100, completed=True)
+        success_message = f'"{assignment.title}" was marked complete.'
+    elif action == "mark_incomplete":
+        updated, errors = set_assignment_status(assignment, completed=False)
+        success_message = f'"{assignment.title}" is back in your active queue.'
+    elif action == "save_progress":
+        try:
+            progress = int(request.form.get("progress", ""))
+        except (TypeError, ValueError):
+            progress = None
+        if progress is None:
+            updated, errors = None, {"progress": "Progress must be a whole number from 0 to 100."}
+        else:
+            updated, errors = set_assignment_status(assignment, progress=progress)
+        success_message = f'Progress for "{assignment.title}" was updated.'
+    else:
+        updated, errors = None, {"action": "Unknown progress action."}
+
+    if errors:
+        flash(next(iter(errors.values())), "error")
+    else:
+        flash(success_message, "success")
     return redirect(url_for("main.dashboard"))
 
 
