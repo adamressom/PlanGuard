@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/assignments.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/edit.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/delete.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/progress.css') }}">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
@@ -42,5 +43,6 @@
   <main>{% block content %}{% endblock %}</main>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   <script src="{{ url_for('static', filename='js/delete.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/progress.js') }}"></script>
 </body>
 </html>

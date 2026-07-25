@@ -33,3 +33,4 @@
 - [x] Database-backed assignment creation and validation
 - [x] Ownership-protected assignment editing and live re-ranking
 - [x] Confirmed, ownership-protected assignment deletion
+- [x] Inline progress tracking and separate completed-work queue

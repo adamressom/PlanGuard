@@ -95,3 +95,21 @@ def update_assignment(assignment, data):
 def remove_assignment(assignment):
     db.session.delete(assignment)
     db.session.commit()
+
+
+def set_assignment_status(assignment, progress=None, completed=None):
+    errors = {}
+    if progress is not None:
+        if not isinstance(progress, int) or not 0 <= progress <= 100:
+            errors["progress"] = "Progress must be a whole number from 0 to 100."
+    if completed is not None and not isinstance(completed, bool):
+        errors["completed"] = "Completion status must be true or false."
+    if errors:
+        return None, errors
+
+    if progress is not None:
+        assignment.progress = progress
+    if completed is not None:
+        assignment.completed = completed
+    db.session.commit()
+    return assignment, {}
