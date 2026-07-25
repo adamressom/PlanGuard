@@ -86,6 +86,17 @@
         <p class="focus-message" role="status" aria-live="polite" data-focus-message></p>
         {% endif %}
       </section>
+      <section class="panel focus-history" aria-labelledby="focus-history-title">
+        <div class="history-heading"><div><span class="kicker">Recent activity</span><h3 id="focus-history-title">Focus history</h3></div><span class="history-count">{{ focus_history|length }}</span></div>
+        {% for session in focus_history %}
+        <article class="history-row">
+          <span class="history-status {{ session.status }}" aria-label="{{ session.status }} session">{{ '✓' if session.status == 'completed' else '→' }}</span>
+          <div class="history-copy"><h4>{{ session.assignment_title }}</h4><p>{{ session.ended_at[:10] }} · {{ session.planned_minutes }} min planned</p></div>
+          <div class="history-duration"><b>{{ session.completed_seconds // 60 }}:{{ '%02d'|format(session.completed_seconds % 60) }}</b><span>{{ 'completed' if session.status == 'completed' else 'ended early' }}</span></div>
+        </article>
+        {% endfor %}
+        {% if not focus_history %}<div class="history-empty"><span aria-hidden="true">◷</span><p>Finish a focus block and your recent study history will appear here.</p></div>{% endif %}
+      </section>
       <section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section>
     </aside>
   </div>

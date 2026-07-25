@@ -4,7 +4,7 @@ from . import db
 from .auth import api_login_required, login_required
 from .models import Assignment, FocusSession, IntegrationState
 from .services.assignments import create_assignment, remove_assignment, set_assignment_status, update_assignment as save_assignment_updates
-from .services.focus import FocusStateError, active_focus_for_user, end_focus_session, focus_payload, pause_focus_session, resume_focus_session, start_focus_session
+from .services.focus import FocusStateError, active_focus_for_user, end_focus_session, focus_payload, pause_focus_session, recent_focus_history, resume_focus_session, start_focus_session
 from .services.ownership import get_owned_record, owned_records
 from .services.priority import assignment_priority_input, rank_assignments
 
@@ -62,6 +62,7 @@ def dashboard():
         available_minutes=g.user.available_study_minutes,
     )
     active_focus = active_focus_for_user(g.user.id)
+    focus_history = recent_focus_history(g.user.id)
     recommended = active_assignments[0] if active_assignments else None
     recommended_focus_minutes = 0
     if recommended and g.user.available_study_minutes > 0:
@@ -78,6 +79,7 @@ def dashboard():
         available_minutes=g.user.available_study_minutes,
         active_focus=focus_payload(active_focus) if active_focus else None,
         recommended_focus_minutes=recommended_focus_minutes,
+        focus_history=[focus_payload(item) for item in focus_history],
     )
 
 
@@ -104,6 +106,19 @@ def update_availability():
 def active_focus_session_api():
     focus_session = active_focus_for_user(g.user.id)
     return jsonify(session=focus_payload(focus_session) if focus_session else None)
+
+
+@main.get("/api/focus-sessions/history")
+@api_login_required
+def focus_session_history_api():
+    return jsonify(sessions=[focus_payload(item) for item in recent_focus_history(g.user.id)])
+
+
+@main.get("/api/focus-sessions/<int:focus_session_id>")
+@api_login_required
+def focus_session_detail_api(focus_session_id):
+    focus_session = get_owned_record(FocusSession, focus_session_id)
+    return jsonify(session=focus_payload(focus_session)) if focus_session else api_not_found()
 
 
 @main.post("/api/focus-sessions")

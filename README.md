@@ -25,7 +25,8 @@ vior
 - Account-level study availability with presets and time-fit explanations
 - Per-assignment score breakdowns with deterministic plain-language explanations
 - Persistent focus-session timer with pause, resume, completion, refresh recovery, and accessible controls
-- 125 unit, authentication, authorization, assignment, progress, ranking, availability, explanation, focus-session, and route tests
+- User-scoped recent focus history with frozen completed durations
+- 129 unit, authentication, authorization, assignment, progress, ranking, availability, explanation, focus-session, migration, and route tests
 - Architecture diagram, Kanban board, and standup notes
 
 ## Quick start

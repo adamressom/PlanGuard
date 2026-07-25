@@ -23,11 +23,20 @@ def apply_schema_updates():
         user_columns = {column["name"] for column in inspector.get_columns("user")}
         if "available_study_minutes" not in user_columns:
             statements.append("ALTER TABLE user ADD COLUMN available_study_minutes INTEGER NOT NULL DEFAULT 120")
+    if "focus_session" in table_names:
+        focus_columns = {column["name"] for column in inspector.get_columns("focus_session")}
+        if "completed_seconds" not in focus_columns:
+            statements.append("ALTER TABLE focus_session ADD COLUMN completed_seconds INTEGER")
 
     if statements:
         with db.engine.begin() as connection:
             for statement in statements:
                 connection.execute(text(statement))
+            if "focus_session" in table_names:
+                connection.execute(text(
+                    "UPDATE focus_session SET completed_seconds = accumulated_seconds "
+                    "WHERE completed_seconds IS NULL AND status IN ('completed', 'ended')"
+                ))
 
 
 def create_app(test_config=None):
