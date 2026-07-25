@@ -11,15 +11,18 @@ db = SQLAlchemy()
 def apply_schema_updates():
     """Apply small, additive SQLite updates while the project is pre-migrations."""
     inspector = inspect(db.engine)
-    if "assignment" not in inspector.get_table_names():
-        return
-
-    columns = {column["name"] for column in inspector.get_columns("assignment")}
+    table_names = inspector.get_table_names()
     statements = []
-    if "notes" not in columns:
-        statements.append("ALTER TABLE assignment ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
-    if "provider_id" not in columns:
-        statements.append("ALTER TABLE assignment ADD COLUMN provider_id VARCHAR(255)")
+    if "assignment" in table_names:
+        assignment_columns = {column["name"] for column in inspector.get_columns("assignment")}
+        if "notes" not in assignment_columns:
+            statements.append("ALTER TABLE assignment ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+        if "provider_id" not in assignment_columns:
+            statements.append("ALTER TABLE assignment ADD COLUMN provider_id VARCHAR(255)")
+    if "user" in table_names:
+        user_columns = {column["name"] for column in inspector.get_columns("user")}
+        if "available_study_minutes" not in user_columns:
+            statements.append("ALTER TABLE user ADD COLUMN available_study_minutes INTEGER NOT NULL DEFAULT 120")
 
     if statements:
         with db.engine.begin() as connection:

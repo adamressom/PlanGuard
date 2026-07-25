@@ -10,6 +10,7 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False)
     display_name = db.Column(db.String(120), nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    available_study_minutes = db.Column(db.Integer, nullable=False, default=120)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     assignments = db.relationship("Assignment", backref="owner", lazy=True)
 

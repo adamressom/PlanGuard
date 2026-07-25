@@ -74,3 +74,13 @@ def test_equal_scores_use_deadline_then_id_as_deterministic_tiebreakers():
 def test_deadline_metadata_handles_near_deadline_without_rounding_to_zero():
     metadata = deadline_metadata(NOW + timedelta(minutes=20), NOW)
     assert metadata["due_label"] == "Due in less than 1 hour"
+
+
+def test_ranked_item_explains_time_fit():
+    item = task(estimated_minutes=90)
+    limited = rank_assignments([item], available_minutes=30, now=NOW)[0]
+    fitting = rank_assignments([item], available_minutes=90, now=NOW)[0]
+    assert limited["fits_available_time"] is False
+    assert limited["time_fit_label"] == "Needs 60 more minutes"
+    assert fitting["fits_available_time"] is True
+    assert fitting["time_fit_label"] == "Fits your 90-minute window"
