@@ -8,10 +8,10 @@
       <section class="panel queue">
         <div class="panel-title"><div><span>ACTIVE PRIORITY QUEUE</span><h2>Your next moves</h2></div><span class="sync">● Synced</span></div>
         {% for item in assignments %}
-        <article class="task-row">
-          <div class="rank">{{ '%02d'|format(loop.index) }}</div>
+        <article class="task-row{% if loop.first %} top-recommendation{% endif %}{% if item.is_overdue %} overdue-task{% endif %}">
+          <div class="rank">{% if loop.first %}<span class="top-crown">★</span>{% endif %}{{ '%02d'|format(loop.index) }}</div>
           <div class="task-info">
-            <small>{{ item.course }}</small>
+            <div class="task-meta"><small>{{ item.course }}</small>{% if loop.first %}<span class="top-pick-badge">Top priority</span>{% endif %}<span class="due-badge {{ item.deadline_status }}">{{ item.due_label }}</span></div>
             <div class="task-title-line">
               <h3><a href="{{ url_for('main.assignment_detail', assignment_id=item.id) }}">{{ item.title }}</a></h3>
               <div class="task-actions"><a class="edit-link" href="{{ url_for('main.edit_assignment', assignment_id=item.id) }}" aria-label="Edit {{ item.title }}"><span aria-hidden="true">✎</span> Edit</a><button class="delete-link" type="button" data-delete-open data-delete-name="{{ item.title }}" data-delete-url="{{ url_for('main.delete_assignment_page', assignment_id=item.id) }}" aria-label="Delete {{ item.title }}"><span aria-hidden="true">×</span> Delete</button></div>
@@ -42,7 +42,7 @@
     </div>
 
     <aside class="side-stack">
-      <section class="panel focus"><span class="kicker">Recommended block</span><div class="timer">50:00</div><p>{{ recommended.title if recommended else 'Your active queue is clear' }}</p><button class="button ghost" data-focus {% if not recommended %}disabled{% endif %}>Begin focus</button></section>
+      <section class="panel focus top-focus"><span class="kicker">#1 recommendation</span>{% if recommended %}<div class="recommendation-score"><b>{{ recommended.priority_score|int }}</b><span>priority score</span></div><h3>{{ recommended.title }}</h3><p class="recommendation-due {{ recommended.deadline_status }}">{{ recommended.due_label }}</p><div class="timer">50:00</div>{% else %}<div class="timer">—</div><p>Your active queue is clear</p>{% endif %}<button class="button ghost" data-focus {% if not recommended %}disabled{% endif %}>Begin focus</button></section>
       <section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section>
     </aside>
   </div>

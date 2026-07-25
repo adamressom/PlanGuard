@@ -20,7 +20,8 @@ This repository is an intentionally lean hackathon scaffold: it runs, demonstrat
 - Assignment editing with shared validation and immediate priority recalculation
 - Confirmed assignment deletion from the dashboard and detail view
 - Inline progress updates, completion controls, and active/completed queues
-- 73 unit, authentication, authorization, assignment, progress, and route tests
+- Deterministic database priority queue with top-pick and overdue states
+- 82 unit, authentication, authorization, assignment, progress, ranking, and route tests
 - Architecture diagram, Kanban board, and standup notes
 
 ## Quick start
