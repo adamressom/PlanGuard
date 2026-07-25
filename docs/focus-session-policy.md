@@ -1,9 +1,9 @@
 # Assignment deletion and focus sessions
 
-PlanGuard does not yet persist focus sessions. When that model is introduced, assignment deletion will follow this policy:
+PlanGuard persists focus sessions and applies this policy when an assignment is deleted:
 
 - Scheduled or active focus sessions are deleted with the assignment because they are actionable plan items.
 - Completed focus sessions are retained as study-history records, with an assignment title snapshot and a nullable `assignment_id` set to `NULL`.
-- Database foreign keys will enforce these behaviors rather than relying only on route code.
+- The shared assignment service enforces the policy for both page and JSON deletion routes.
 
 This keeps the current plan clean without erasing a student's completed study history.

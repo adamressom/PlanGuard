@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from .. import db
-from ..models import Assignment
+from ..models import Assignment, FocusSession
 
 
 def _required_text(data, field, label, max_length, errors):
@@ -93,6 +93,14 @@ def update_assignment(assignment, data):
 
 
 def remove_assignment(assignment):
+    sessions = db.session.scalars(
+        db.select(FocusSession).where(FocusSession.assignment_id == assignment.id)
+    ).all()
+    for focus_session in sessions:
+        if focus_session.status in {"running", "paused"}:
+            db.session.delete(focus_session)
+        else:
+            focus_session.assignment_id = None
     db.session.delete(assignment)
     db.session.commit()
 

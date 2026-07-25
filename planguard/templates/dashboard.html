@@ -67,7 +67,25 @@
     </div>
 
     <aside class="side-stack">
-      <section class="panel focus top-focus"><span class="kicker">#1 recommendation</span>{% if recommended %}<div class="recommendation-score"><b>{{ recommended.priority_score|int }}</b><span>priority score</span></div><h3>{{ recommended.title }}</h3><p class="recommendation-due {{ recommended.deadline_status }}">{{ recommended.due_label }}</p><p class="time-fit {{ 'fits' if recommended.fits_available_time else 'exceeds' }}"><span aria-hidden="true">{{ '✓' if recommended.fits_available_time else '↗' }}</span>{{ recommended.time_fit_label }}</p><div class="timer">{{ [recommended.estimated_minutes, available_minutes, 50]|min|int }}:00</div>{% else %}<div class="timer">—</div><p>Your active queue is clear</p>{% endif %}<button class="button ghost" data-focus {% if not recommended or available_minutes == 0 %}disabled{% endif %}>Begin focus</button></section>
+      <section class="panel focus top-focus focus-timer" data-focus-root data-active-url="{{ url_for('main.active_focus_session_api') }}">
+        {% if active_focus %}
+        <span class="kicker">Focus session</span>
+        <span class="focus-state {{ active_focus.status }}" data-focus-state>{{ active_focus.status }}</span>
+        <h3 data-focus-title>{{ active_focus.assignment_title }}</h3>
+        <div class="timer live-timer" role="timer" aria-label="Focus time remaining" data-focus-display data-session-id="{{ active_focus.id }}" data-status="{{ active_focus.status }}" data-remaining-seconds="{{ active_focus.remaining_seconds }}">{{ '%02d:%02d'|format(active_focus.remaining_seconds // 60, active_focus.remaining_seconds % 60) }}</div>
+        <p class="focus-intent">{{ active_focus.planned_minutes }}-minute focus block · persists across refreshes</p>
+        <div class="focus-controls">
+          <button class="focus-control pause" type="button" data-focus-pause {% if active_focus.status != 'running' %}hidden{% endif %}>Pause</button>
+          <button class="focus-control resume" type="button" data-focus-resume {% if active_focus.status != 'paused' %}hidden{% endif %}>Resume</button>
+          <button class="focus-control end" type="button" data-focus-end>End session</button>
+        </div>
+        <p class="focus-message" role="status" aria-live="polite" data-focus-message></p>
+        {% else %}
+        <span class="kicker">#1 recommendation</span>
+        {% if recommended %}<div class="recommendation-score"><b>{{ recommended.priority_score|int }}</b><span>priority score</span></div><h3>{{ recommended.title }}</h3><p class="recommendation-due {{ recommended.deadline_status }}">{{ recommended.due_label }}</p><p class="time-fit {{ 'fits' if recommended.fits_available_time else 'exceeds' }}"><span aria-hidden="true">{{ '✓' if recommended.fits_available_time else '↗' }}</span>{{ recommended.time_fit_label }}</p><div class="timer">{{ recommended_focus_minutes }}:00</div><button class="button ghost" type="button" data-focus {% if available_minutes == 0 %}disabled{% endif %} data-focus-start data-assignment-id="{{ recommended.id }}" data-planned-minutes="{{ recommended_focus_minutes }}">Start focus block</button>{% else %}<div class="timer">—</div><p>Your active queue is clear</p><button class="button ghost" type="button" disabled>Start focus block</button>{% endif %}
+        <p class="focus-message" role="status" aria-live="polite" data-focus-message></p>
+        {% endif %}
+      </section>
       <section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section>
     </aside>
   </div>

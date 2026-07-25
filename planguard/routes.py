@@ -2,8 +2,9 @@ from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template
 
 from . import db
 from .auth import api_login_required, login_required
-from .models import Assignment, IntegrationState
+from .models import Assignment, FocusSession, IntegrationState
 from .services.assignments import create_assignment, remove_assignment, set_assignment_status, update_assignment as save_assignment_updates
+from .services.focus import FocusStateError, active_focus_for_user, end_focus_session, focus_payload, pause_focus_session, resume_focus_session, start_focus_session
 from .services.ownership import get_owned_record, owned_records
 from .services.priority import assignment_priority_input, rank_assignments
 
@@ -60,12 +61,23 @@ def dashboard():
         [assignment_priority_input(item) for item in active_records],
         available_minutes=g.user.available_study_minutes,
     )
+    active_focus = active_focus_for_user(g.user.id)
+    recommended = active_assignments[0] if active_assignments else None
+    recommended_focus_minutes = 0
+    if recommended and g.user.available_study_minutes > 0:
+        recommended_focus_minutes = max(1, min(
+            int(recommended["estimated_minutes"] or 1),
+            g.user.available_study_minutes,
+            50,
+        ))
     return render_template(
         "dashboard.html",
         assignments=active_assignments,
         completed_assignments=completed_assignments,
-        recommended=active_assignments[0] if active_assignments else None,
+        recommended=recommended,
         available_minutes=g.user.available_study_minutes,
+        active_focus=focus_payload(active_focus) if active_focus else None,
+        recommended_focus_minutes=recommended_focus_minutes,
     )
 
 
@@ -85,6 +97,79 @@ def update_availability():
         db.session.commit()
         flash(f"Your daily study window is now {minutes} minutes.", "success")
     return redirect(url_for("main.dashboard"))
+
+
+@main.get("/api/focus-sessions/active")
+@api_login_required
+def active_focus_session_api():
+    focus_session = active_focus_for_user(g.user.id)
+    return jsonify(session=focus_payload(focus_session) if focus_session else None)
+
+
+@main.post("/api/focus-sessions")
+@api_login_required
+def start_focus_session_api():
+    data = request.get_json(silent=True) or {}
+    assignment_id = data.get("assignment_id")
+    planned_minutes = data.get("planned_minutes")
+    if not isinstance(assignment_id, int) or isinstance(assignment_id, bool):
+        return jsonify(error="A valid assignment ID is required."), 400
+    assignment = get_owned_record(Assignment, assignment_id)
+    if assignment is None:
+        return api_not_found()
+    try:
+        focus_session = start_focus_session(g.user.id, assignment, planned_minutes)
+    except FocusStateError as exc:
+        status = 409 if active_focus_for_user(g.user.id) else 400
+        return jsonify(error=str(exc)), status
+    return jsonify(session=focus_payload(focus_session)), 201
+
+
+def _owned_focus_or_error(focus_session_id):
+    focus_session = get_owned_record(FocusSession, focus_session_id)
+    if focus_session is None:
+        return None, api_not_found()
+    return focus_session, None
+
+
+@main.post("/api/focus-sessions/<int:focus_session_id>/pause")
+@api_login_required
+def pause_focus_session_api(focus_session_id):
+    focus_session, error = _owned_focus_or_error(focus_session_id)
+    if error:
+        return error
+    try:
+        pause_focus_session(focus_session)
+    except FocusStateError as exc:
+        return jsonify(error=str(exc)), 409
+    return jsonify(session=focus_payload(focus_session))
+
+
+@main.post("/api/focus-sessions/<int:focus_session_id>/resume")
+@api_login_required
+def resume_focus_session_api(focus_session_id):
+    focus_session, error = _owned_focus_or_error(focus_session_id)
+    if error:
+        return error
+    try:
+        resume_focus_session(focus_session)
+    except FocusStateError as exc:
+        return jsonify(error=str(exc)), 409
+    return jsonify(session=focus_payload(focus_session))
+
+
+@main.post("/api/focus-sessions/<int:focus_session_id>/end")
+@api_login_required
+def end_focus_session_api(focus_session_id):
+    focus_session, error = _owned_focus_or_error(focus_session_id)
+    if error:
+        return error
+    data = request.get_json(silent=True) or {}
+    try:
+        end_focus_session(focus_session, timer_complete=data.get("reason") == "timer_complete")
+    except FocusStateError as exc:
+        return jsonify(error=str(exc)), 409
+    return jsonify(session=focus_payload(focus_session))
 
 
 @main.route("/assignments/new", methods=("GET", "POST"))
@@ -221,8 +306,7 @@ def delete_assignment(assignment_id):
     assignment = get_owned_record(Assignment, assignment_id)
     if assignment is None:
         return api_not_found()
-    db.session.delete(assignment)
-    db.session.commit()
+    remove_assignment(assignment)
     return "", 204
 
 

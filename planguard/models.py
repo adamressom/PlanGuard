@@ -13,6 +13,7 @@ class User(db.Model):
     available_study_minutes = db.Column(db.Integer, nullable=False, default=120)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     assignments = db.relationship("Assignment", backref="owner", lazy=True)
+    focus_sessions = db.relationship("FocusSession", backref="user", lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -58,3 +59,17 @@ class IntegrationState(db.Model):
     last_synced_at = db.Column(db.DateTime)
     retry_count = db.Column(db.Integer, nullable=False, default=0)
     cached_payload = db.Column(db.JSON)
+
+
+class FocusSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey("assignment.id"), nullable=True, index=True)
+    assignment_title = db.Column(db.String(180), nullable=False)
+    planned_minutes = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="running", index=True)
+    accumulated_seconds = db.Column(db.Integer, nullable=False, default=0)
+    started_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    last_resumed_at = db.Column(db.DateTime, nullable=True)
+    ended_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
