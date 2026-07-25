@@ -57,14 +57,34 @@ def dashboard():
         .order_by(Assignment.deadline.desc())
     ).all()
     active_assignments = rank_assignments(
-        [assignment_priority_input(item) for item in active_records]
+        [assignment_priority_input(item) for item in active_records],
+        available_minutes=g.user.available_study_minutes,
     )
     return render_template(
         "dashboard.html",
         assignments=active_assignments,
         completed_assignments=completed_assignments,
         recommended=active_assignments[0] if active_assignments else None,
+        available_minutes=g.user.available_study_minutes,
     )
+
+
+@main.post("/preferences/availability")
+@login_required
+def update_availability():
+    raw_minutes = request.form.get("available_minutes", "").strip()
+    try:
+        minutes = int(raw_minutes)
+    except (TypeError, ValueError):
+        minutes = None
+
+    if minutes is None or not 0 <= minutes <= 1440:
+        flash("Available study time must be a whole number from 0 to 1440 minutes.", "error")
+    else:
+        g.user.available_study_minutes = minutes
+        db.session.commit()
+        flash(f"Your daily study window is now {minutes} minutes.", "success")
+    return redirect(url_for("main.dashboard"))
 
 
 @main.route("/assignments/new", methods=("GET", "POST"))

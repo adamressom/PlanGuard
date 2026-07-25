@@ -107,14 +107,26 @@ def assignment_priority_input(assignment):
 
 def rank_assignments(assignments, available_minutes=120, now=None):
     now = _now_utc(now)
+    available = max(_as_number(available_minutes, 120), 0)
     fallback_deadline = now + timedelta(days=36500)
     scored = []
     for position, item in enumerate(assignments):
         metadata = deadline_metadata(item.get("deadline"), now)
+        estimated = max(_as_number(item.get("estimated_minutes"), 60), 1)
+        fits_available_time = estimated <= available
+        if available == 0:
+            time_fit_label = "No study time available"
+        elif fits_available_time:
+            time_fit_label = f"Fits your {round(available)}-minute window"
+        else:
+            time_fit_label = f"Needs {max(1, round(estimated - available))} more minutes"
         scored.append({
             **item,
             **metadata,
-            "priority_score": calculate_priority(item, available_minutes, now),
+            "available_minutes": round(available),
+            "fits_available_time": fits_available_time,
+            "time_fit_label": time_fit_label,
+            "priority_score": calculate_priority(item, available, now),
             "_sort_deadline": _aware_datetime(item.get("deadline")) or fallback_deadline,
             "_stable_position": position,
         })

@@ -3,6 +3,15 @@
 {% block content %}
 <section class="dashboard shell">
   <div class="dash-heading"><div><span class="kicker">Tuesday's command center</span><h1>Protect your momentum.</h1></div><a class="button" href="{{ url_for('main.new_assignment') }}">+ Add assignment</a></div>
+  <section class="availability-panel panel" aria-labelledby="availability-title">
+    <div class="availability-copy"><span class="availability-icon" aria-hidden="true">◷</span><div><span class="kicker">Today's capacity</span><h2 id="availability-title">I have <strong>{{ available_minutes }}</strong> minutes to study</h2><p>Saved to your account · recommendations update instantly</p></div></div>
+    <div class="availability-controls">
+      <div class="preset-row" aria-label="Study time presets">
+        {% for minutes in (30, 60, 120, 180, 240) %}<form method="post" action="{{ url_for('main.update_availability') }}"><button name="available_minutes" value="{{ minutes }}" class="preset-button{% if available_minutes == minutes %} active{% endif %}" type="submit">{{ minutes }}m</button></form>{% endfor %}
+      </div>
+      <form class="custom-availability" method="post" action="{{ url_for('main.update_availability') }}"><label for="available-minutes">Custom</label><input id="available-minutes" name="available_minutes" type="number" min="0" max="1440" step="1" value="{{ available_minutes }}" required><span>min</span><button type="submit">Update plan</button></form>
+    </div>
+  </section>
   <div class="dash-grid">
     <div class="queue-stack">
       <section class="panel queue">
@@ -42,7 +51,7 @@
     </div>
 
     <aside class="side-stack">
-      <section class="panel focus top-focus"><span class="kicker">#1 recommendation</span>{% if recommended %}<div class="recommendation-score"><b>{{ recommended.priority_score|int }}</b><span>priority score</span></div><h3>{{ recommended.title }}</h3><p class="recommendation-due {{ recommended.deadline_status }}">{{ recommended.due_label }}</p><div class="timer">50:00</div>{% else %}<div class="timer">—</div><p>Your active queue is clear</p>{% endif %}<button class="button ghost" data-focus {% if not recommended %}disabled{% endif %}>Begin focus</button></section>
+      <section class="panel focus top-focus"><span class="kicker">#1 recommendation</span>{% if recommended %}<div class="recommendation-score"><b>{{ recommended.priority_score|int }}</b><span>priority score</span></div><h3>{{ recommended.title }}</h3><p class="recommendation-due {{ recommended.deadline_status }}">{{ recommended.due_label }}</p><p class="time-fit {{ 'fits' if recommended.fits_available_time else 'exceeds' }}"><span aria-hidden="true">{{ '✓' if recommended.fits_available_time else '↗' }}</span>{{ recommended.time_fit_label }}</p><div class="timer">{{ [recommended.estimated_minutes, available_minutes, 50]|min|int }}:00</div>{% else %}<div class="timer">—</div><p>Your active queue is clear</p>{% endif %}<button class="button ghost" data-focus {% if not recommended or available_minutes == 0 %}disabled{% endif %}>Begin focus</button></section>
       <section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section>
     </aside>
   </div>

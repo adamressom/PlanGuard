@@ -42,3 +42,31 @@ def test_existing_assignment_table_receives_new_columns(tmp_path):
     assert row.title == "Existing work"
     assert row.notes == ""
     assert row.provider_id is None
+
+
+def test_existing_user_table_receives_availability_preference(tmp_path):
+    database_path = tmp_path / "legacy-user.db"
+    connection = sqlite3.connect(database_path)
+    connection.execute(
+        """CREATE TABLE user (
+            id INTEGER PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            display_name VARCHAR(120) NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            created_at DATETIME
+        )"""
+    )
+    connection.execute(
+        "INSERT INTO user (id, email, display_name, password_hash) VALUES (1, 'legacy@example.com', 'Legacy', 'hash')"
+    )
+    connection.commit()
+    connection.close()
+
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": f"sqlite:///{database_path}"})
+    with app.app_context():
+        columns = {column["name"] for column in inspect(db.engine).get_columns("user")}
+        row = db.session.execute(text("SELECT email, available_study_minutes FROM user WHERE id = 1")).one()
+
+    assert "available_study_minutes" in columns
+    assert row.email == "legacy@example.com"
+    assert row.available_study_minutes == 120
