@@ -45,6 +45,7 @@ def test_focus_service_pause_resume_and_end(focus_setup):
         end_focus_session(session, now=start + timedelta(minutes=5, seconds=10))
         assert session.status == "ended"
         assert session.accumulated_seconds == 30
+        assert session.completed_seconds == 30
 
 
 def test_completed_timer_and_invalid_state(focus_setup):
@@ -55,6 +56,7 @@ def test_completed_timer_and_invalid_state(focus_setup):
         end_focus_session(session, timer_complete=True, now=start + timedelta(minutes=1))
         assert session.status == "completed"
         assert session.accumulated_seconds == 60
+        assert session.completed_seconds == 60
         with pytest.raises(FocusStateError):
             resume_focus_session(session)
 
@@ -100,6 +102,7 @@ def test_anonymous_and_cross_user_access_is_rejected(focus_setup):
     app, ids = focus_setup
     anonymous = app.test_client()
     assert anonymous.get("/api/focus-sessions/active").status_code == 401
+    assert anonymous.get("/api/focus-sessions/history").status_code == 401
     assert anonymous.post("/api/focus-sessions", json={"assignment_id": ids["assignment"], "planned_minutes": 25}).status_code == 401
     owner = app.test_client()
     sign_in(owner, ids["owner"])
@@ -175,3 +178,53 @@ def test_deletion_removes_active_and_retains_finished_history(focus_setup):
         retained = db.session.get(FocusSession, history_id)
         assert retained.assignment_id is None
         assert retained.assignment_title == "Finished project"
+
+
+def test_recent_history_api_is_newest_first_and_user_scoped(focus_setup):
+    app, ids = focus_setup
+    base = datetime(2026, 7, 24, 12, 0, tzinfo=timezone.utc)
+    with app.app_context():
+        for index in range(7):
+            db.session.add(FocusSession(user_id=ids["owner"], assignment_id=ids["assignment"], assignment_title=f"Owner session {index}", planned_minutes=25, status="completed", accumulated_seconds=300 + index, completed_seconds=300 + index, started_at=base + timedelta(hours=index), ended_at=base + timedelta(hours=index)))
+        db.session.add(FocusSession(user_id=ids["other"], assignment_id=ids["private"], assignment_title="Other user's private session", planned_minutes=30, status="completed", accumulated_seconds=1800, completed_seconds=1800, started_at=base + timedelta(days=1), ended_at=base + timedelta(days=1)))
+        db.session.commit()
+
+    client = app.test_client()
+    sign_in(client, ids["owner"])
+    response = client.get("/api/focus-sessions/history")
+    assert response.status_code == 200
+    sessions = response.get_json()["sessions"]
+    assert len(sessions) == 5
+    assert [item["assignment_title"] for item in sessions] == [f"Owner session {index}" for index in range(6, 1, -1)]
+    assert all(item["completed_seconds"] is not None for item in sessions)
+    assert all("private" not in item["assignment_title"].lower() for item in sessions)
+
+
+def test_focus_detail_does_not_reveal_another_users_session(focus_setup):
+    app, ids = focus_setup
+    with app.app_context():
+        private = FocusSession(user_id=ids["other"], assignment_id=ids["private"], assignment_title="Private history", planned_minutes=20, status="completed", accumulated_seconds=1200, completed_seconds=1200, started_at=datetime.now(timezone.utc), ended_at=datetime.now(timezone.utc))
+        db.session.add(private)
+        db.session.commit()
+        private_id = private.id
+    client = app.test_client()
+    sign_in(client, ids["owner"])
+    response = client.get(f"/api/focus-sessions/{private_id}")
+    assert response.status_code == 404
+    assert response.get_json() == {"error": "Record not found."}
+
+
+def test_dashboard_displays_recent_focus_history_and_empty_state(focus_setup):
+    app, ids = focus_setup
+    client = app.test_client()
+    sign_in(client, ids["owner"])
+    empty = client.get("/dashboard")
+    assert b"Focus history" in empty.data
+    assert b"recent study history will appear here" in empty.data
+
+    started = client.post("/api/focus-sessions", json={"assignment_id": ids["assignment"], "planned_minutes": 25}).get_json()["session"]
+    client.post(f"/api/focus-sessions/{started['id']}/end", json={"reason": "manual"})
+    history = client.get("/dashboard")
+    assert b"Priority project" in history.data
+    assert b"ended early" in history.data
+    assert b'class="history-duration"' in history.data

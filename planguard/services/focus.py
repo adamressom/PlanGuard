@@ -4,6 +4,7 @@ from .. import db
 from ..models import FocusSession
 
 ACTIVE_FOCUS_STATUSES = ("running", "paused")
+HISTORY_FOCUS_STATUSES = ("completed", "ended")
 
 
 class FocusStateError(ValueError):
@@ -45,6 +46,7 @@ def focus_payload(session, now=None):
         "planned_minutes": session.planned_minutes,
         "status": session.status,
         "elapsed_seconds": elapsed,
+        "completed_seconds": session.completed_seconds,
         "remaining_seconds": remaining,
         "started_at": _aware(session.started_at).isoformat(),
         "ended_at": _aware(session.ended_at).isoformat() if session.ended_at else None,
@@ -58,6 +60,15 @@ def active_focus_for_user(user_id):
         .where(FocusSession.user_id == user_id, FocusSession.status.in_(ACTIVE_FOCUS_STATUSES))
         .order_by(FocusSession.id.desc())
     )
+
+
+def recent_focus_history(user_id, limit=5):
+    return db.session.scalars(
+        db.select(FocusSession)
+        .where(FocusSession.user_id == user_id, FocusSession.status.in_(HISTORY_FOCUS_STATUSES))
+        .order_by(FocusSession.ended_at.desc(), FocusSession.id.desc())
+        .limit(limit)
+    ).all()
 
 
 def start_focus_session(user_id, assignment, planned_minutes, now=None):
@@ -112,6 +123,7 @@ def end_focus_session(session, timer_complete=False, now=None):
     if session.status == "running":
         session.accumulated_seconds = elapsed_seconds(session, now)
     session.accumulated_seconds = min(session.accumulated_seconds, session.planned_minutes * 60)
+    session.completed_seconds = session.accumulated_seconds
     session.last_resumed_at = None
     session.ended_at = now
     session.status = "completed" if timer_complete or session.accumulated_seconds >= session.planned_minutes * 60 else "ended"

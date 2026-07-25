@@ -69,6 +69,7 @@ class FocusSession(db.Model):
     planned_minutes = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="running", index=True)
     accumulated_seconds = db.Column(db.Integer, nullable=False, default=0)
+    completed_seconds = db.Column(db.Integer, nullable=True)
     started_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     last_resumed_at = db.Column(db.DateTime, nullable=True)
     ended_at = db.Column(db.DateTime, nullable=True)
