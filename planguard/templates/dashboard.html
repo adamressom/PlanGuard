@@ -1,17 +1,85 @@
 {% extends "base.html" %}
-{% block title %}Command Center — PlanGuard{% endblock %}
+{% block title %}Command Center - PlanGuard{% endblock %}
 {% block content %}
 <section class="dashboard shell">
-  <div class="dash-heading"><div><span class="kicker">Tuesday's command center</span><h1>Protect your momentum.</h1></div><button class="button" data-add-task>+ Add assignment</button></div>
+  <div class="dash-heading">
+    <div>
+      <span class="kicker">Tuesday's command center</span>
+      <h1>Protect your momentum.</h1>
+    </div>
+    <button class="button" data-add-task>+ Add assignment</button>
+  </div>
   <div class="dash-grid">
-    <section class="panel queue"><div class="panel-title"><div><span>PRIORITY QUEUE</span><h2>Your next moves</h2></div><span class="sync">● Synced</span></div>
+    <section class="panel queue">
+      <div class="panel-title">
+        <div>
+          <span>PRIORITY QUEUE</span>
+          <h2>Your next moves</h2>
+        </div>
+        <span class="sync">Synced</span>
+      </div>
       {% for item in assignments %}
-      <article class="task-row"><div class="rank">0{{ loop.index }}</div><div class="task-info"><small>{{ item.course }}</small><h3>{{ item.title }}</h3><div class="meter"><i style="width: {{ item.progress }}%"></i></div></div><div class="task-score"><b>{{ item.priority_score|int }}</b><span>score</span></div></article>
+      <article class="task-row" data-assignment-row data-assignment-id="{{ item.id }}">
+        <div class="rank">0{{ loop.index }}</div>
+        <div class="task-info">
+          <small>{{ item.course }}</small>
+          <h3>{{ item.title }}</h3>
+          <div class="meter"><i style="width: {{ item.progress }}%"></i></div>
+        </div>
+        <div class="task-score">
+          <b>{{ item.priority_score|int }}</b>
+          <span>score</span>
+        </div>
+      </article>
       {% endfor %}
     </section>
-    <aside class="side-stack"><section class="panel focus"><span class="kicker">Recommended block</span><div class="timer">50:00</div><p>Physics problem set</p><button class="button ghost" data-focus>Begin focus</button></section><section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section></aside>
+    <aside class="side-stack">
+      <section
+        class="panel focus"
+        data-focus-card
+        data-assignment-id="{{ recommended.id }}"
+        data-assignment-title="{{ recommended.title }}"
+        data-assignment-progress="{{ recommended.progress }}"
+      >
+        <span class="kicker">Recommended block</span>
+        <div class="timer">50:00</div>
+        <p data-focus-title>{{ recommended.title }}</p>
+        <button class="button ghost" data-focus>Begin focus</button>
+      </section>
+      <section class="panel integrations">
+        <h3>Connected world</h3>
+        <div><span>G</span>Google Calendar <b>Ready</b></div>
+        <div><span>N</span>Notion <b>Ready</b></div>
+        <small>Cached plan available if sync fails</small>
+      </section>
+    </aside>
   </div>
 </section>
-<dialog id="task-dialog"><button class="dialog-close" aria-label="Close">×</button><span class="kicker">Quick capture</span><h2>Add an assignment</h2><p>The complete form arrives in the next build. This scaffold already has the data model ready.</p><button class="button dialog-close">Got it</button></dialog>
-{% endblock %}
 
+<dialog id="task-dialog">
+  <button class="dialog-close" aria-label="Close">x</button>
+  <span class="kicker">Quick capture</span>
+  <h2>Add an assignment</h2>
+  <p>The complete form arrives in the next build. This scaffold already has the data model ready.</p>
+  <button class="button dialog-close">Got it</button>
+</dialog>
+
+<dialog id="progress-dialog">
+  <form method="dialog" data-progress-form>
+    <button class="dialog-close" type="button" data-progress-close aria-label="Close">x</button>
+    <span class="kicker">Focus complete</span>
+    <h2>Update assignment progress</h2>
+    <p data-progress-copy></p>
+    <label for="progress-range">Progress</label>
+    <div class="progress-control">
+      <input id="progress-range" name="progress" type="range" min="0" max="100" step="1" data-progress-range>
+      <input aria-label="Progress percent" type="number" min="0" max="100" step="1" data-progress-number>
+      <span>%</span>
+    </div>
+    <div class="dialog-actions">
+      <button class="button ghost" type="submit" data-skip-progress>Finish without changes</button>
+      <button class="button" type="submit" data-save-progress>Save progress</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
