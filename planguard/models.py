@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from werkzeug.security import check_password_hash, generate_password_hash
+
 from . import db
 
 
@@ -7,8 +9,26 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
     display_name = db.Column(db.String(120), nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    available_study_minutes = db.Column(db.Integer, nullable=False, default=120)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     assignments = db.relationship("Assignment", backref="owner", lazy=True)
+    focus_sessions = db.relationship("FocusSession", backref="user", lazy=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def initials(self):
+        words = self.display_name.split()
+        if not words:
+            return "?"
+        if len(words) == 1:
+            return words[0][:2].upper()
+        return f"{words[0][0]}{words[1][0]}".upper()
 
 
 class Assignment(db.Model):
@@ -22,7 +42,13 @@ class Assignment(db.Model):
     course_weight = db.Column(db.Float, nullable=False, default=10)
     progress = db.Column(db.Integer, nullable=False, default=0)
     completed = db.Column(db.Boolean, nullable=False, default=False)
+    notes = db.Column(db.Text, nullable=False, default="")
+    provider_id = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    @property
+    def course_impact(self):
+        return self.course_weight
 
 
 class IntegrationState(db.Model):
@@ -34,3 +60,17 @@ class IntegrationState(db.Model):
     retry_count = db.Column(db.Integer, nullable=False, default=0)
     cached_payload = db.Column(db.JSON)
 
+
+class FocusSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey("assignment.id"), nullable=True, index=True)
+    assignment_title = db.Column(db.String(180), nullable=False)
+    planned_minutes = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="running", index=True)
+    accumulated_seconds = db.Column(db.Integer, nullable=False, default=0)
+    completed_seconds = db.Column(db.Integer, nullable=True)
+    started_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    last_resumed_at = db.Column(db.DateTime, nullable=True)
+    ended_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))

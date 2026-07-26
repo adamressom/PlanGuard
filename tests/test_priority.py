@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from planguard.services.priority import calculate_priority, rank_assignments
+from planguard.services.priority import calculate_priority, deadline_metadata, explain_priority, rank_assignments
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -43,3 +43,88 @@ def test_naive_deadline_is_supported():
     score = calculate_priority(task(deadline=datetime(2026, 1, 2)), now=NOW)
     assert isinstance(score, float)
 
+
+def test_missing_and_malformed_values_do_not_crash_ranking():
+    malformed = {"id": 1, "title": "Edge case", "deadline": None, "difficulty": None, "estimated_minutes": "unknown", "course_weight": float("nan"), "progress": "missing"}
+    ranked = rank_assignments([malformed], available_minutes="invalid", now=NOW)
+    assert 0 <= ranked[0]["priority_score"] <= 100
+    assert ranked[0]["deadline_status"] == "missing"
+    assert ranked[0]["due_label"] == "No deadline"
+
+
+def test_overdue_assignment_gets_clear_metadata_and_bonus():
+    overdue = task(deadline=NOW - timedelta(days=2))
+    due_now = task(deadline=NOW)
+    ranked = rank_assignments([due_now, overdue], now=NOW)
+    assert ranked[0]["is_overdue"] is True
+    assert ranked[0]["deadline_status"] == "overdue"
+    assert ranked[0]["due_label"] == "Overdue by 2d"
+    assert ranked[0]["priority_score"] > ranked[1]["priority_score"]
+
+
+def test_equal_scores_use_deadline_then_id_as_deterministic_tiebreakers():
+    later = task(id=2, title="Later", deadline=NOW + timedelta(days=11))
+    earlier = task(id=3, title="Earlier", deadline=NOW + timedelta(days=10))
+    same_deadline_lower_id = task(id=1, title="Lower ID", deadline=NOW + timedelta(days=10))
+    ranked = rank_assignments([later, earlier, same_deadline_lower_id], now=NOW)
+    assert len({item["priority_score"] for item in ranked}) == 1
+    assert [item["id"] for item in ranked] == [1, 3, 2]
+
+
+def test_deadline_metadata_handles_near_deadline_without_rounding_to_zero():
+    metadata = deadline_metadata(NOW + timedelta(minutes=20), NOW)
+    assert metadata["due_label"] == "Due in less than 1 hour"
+
+
+def test_ranked_item_explains_time_fit():
+    item = task(estimated_minutes=90)
+    limited = rank_assignments([item], available_minutes=30, now=NOW)[0]
+    fitting = rank_assignments([item], available_minutes=90, now=NOW)[0]
+    assert limited["fits_available_time"] is False
+    assert limited["time_fit_label"] == "Needs 60 more minutes"
+    assert fitting["fits_available_time"] is True
+    assert fitting["time_fit_label"] == "Fits your 90-minute window"
+
+
+def test_explanation_returns_all_five_score_factors():
+    details = explain_priority(task(), available_minutes=120, now=NOW)
+    assert [factor["key"] for factor in details["factors"]] == ["deadline", "difficulty", "course_impact", "time_fit", "progress"]
+    assert all({"label", "value", "points", "max_points", "percent", "explanation"}.issubset(factor) for factor in details["factors"])
+
+
+def test_factor_contributions_reconstruct_final_score():
+    details = explain_priority(task(progress=40), available_minutes=75, now=NOW)
+    contribution_total = sum(factor["points"] for factor in details["factors"])
+    expected = min(max(contribution_total, 0), 100)
+    assert abs(details["final_score"] - expected) <= 0.2
+    progress = next(factor for factor in details["factors"] if factor["key"] == "progress")
+    assert progress["points"] < 0
+
+
+def test_high_priority_copy_names_strongest_deterministic_reasons():
+    high = task(deadline=NOW - timedelta(days=2), difficulty=5, course_weight=100, progress=0)
+    details = explain_priority(high, available_minutes=120, now=NOW)
+    assert details["band"] == "high"
+    assert details["summary"] == "High priority because the deadline is overdue and it has major course impact."
+
+
+def test_low_priority_copy_explains_existing_progress():
+    low = task(deadline=NOW + timedelta(days=20), difficulty=1, course_weight=0, estimated_minutes=500, progress=90)
+    details = explain_priority(low, available_minutes=0, now=NOW)
+    assert details["band"] == "low"
+    assert details["summary"] == "Lower priority because most of the work is already complete; other work may need attention first."
+
+
+def test_explanation_is_deterministic_for_same_inputs():
+    item = task(deadline=NOW + timedelta(hours=6), difficulty=4, course_weight=35, estimated_minutes=80, progress=25)
+    first = explain_priority(item, available_minutes=60, now=NOW)
+    second = explain_priority(item, available_minutes=60, now=NOW)
+    assert first == second
+
+
+def test_ranked_assignment_carries_canonical_explanation_details():
+    ranked = rank_assignments([task(id=7)], available_minutes=120, now=NOW)[0]
+    details = explain_priority(task(id=7), available_minutes=120, now=NOW)
+    assert ranked["priority_score"] == details["final_score"]
+    assert ranked["priority_explanation"] == details["summary"]
+    assert ranked["score_factors"] == details["factors"]

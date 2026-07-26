@@ -1,85 +1,105 @@
 {% extends "base.html" %}
-{% block title %}Command Center - PlanGuard{% endblock %}
+{% block title %}Command Center — PlanGuard{% endblock %}
 {% block content %}
 <section class="dashboard shell">
-  <div class="dash-heading">
-    <div>
-      <span class="kicker">Tuesday's command center</span>
-      <h1>Protect your momentum.</h1>
-    </div>
-    <button class="button" data-add-task>+ Add assignment</button>
-  </div>
-  <div class="dash-grid">
-    <section class="panel queue">
-      <div class="panel-title">
-        <div>
-          <span>PRIORITY QUEUE</span>
-          <h2>Your next moves</h2>
-        </div>
-        <span class="sync">Synced</span>
+  <div class="dash-heading"><div><span class="kicker">Tuesday's command center</span><h1>Protect your momentum.</h1></div><a class="button" href="{{ url_for('main.new_assignment') }}">+ Add assignment</a></div>
+  <section class="availability-panel panel" aria-labelledby="availability-title">
+    <div class="availability-copy"><span class="availability-icon" aria-hidden="true">◷</span><div><span class="kicker">Today's capacity</span><h2 id="availability-title">I have <strong>{{ available_minutes }}</strong> minutes to study</h2><p>Saved to your account · recommendations update instantly</p></div></div>
+    <div class="availability-controls">
+      <div class="preset-row" aria-label="Study time presets">
+        {% for minutes in (30, 60, 120, 180, 240) %}<form method="post" action="{{ url_for('main.update_availability') }}"><button name="available_minutes" value="{{ minutes }}" class="preset-button{% if available_minutes == minutes %} active{% endif %}" type="submit">{{ minutes }}m</button></form>{% endfor %}
       </div>
-      {% for item in assignments %}
-      <article class="task-row" data-assignment-row data-assignment-id="{{ item.id }}">
-        <div class="rank">0{{ loop.index }}</div>
-        <div class="task-info">
-          <small>{{ item.course }}</small>
-          <h3>{{ item.title }}</h3>
-          <div class="meter"><i style="width: {{ item.progress }}%"></i></div>
-        </div>
-        <div class="task-score">
-          <b>{{ item.priority_score|int }}</b>
-          <span>score</span>
-        </div>
-      </article>
-      {% endfor %}
-    </section>
+      <form class="custom-availability" method="post" action="{{ url_for('main.update_availability') }}"><label for="available-minutes">Custom</label><input id="available-minutes" name="available_minutes" type="number" min="0" max="1440" step="1" value="{{ available_minutes }}" required><span>min</span><button type="submit">Update plan</button></form>
+    </div>
+  </section>
+  <div class="dash-grid">
+    <div class="queue-stack">
+      <section class="panel queue">
+        <div class="panel-title"><div><span>ACTIVE PRIORITY QUEUE</span><h2>Your next moves</h2></div><span class="sync">● Synced</span></div>
+        {% for item in assignments %}
+        <article class="task-row{% if loop.first %} top-recommendation{% endif %}{% if item.is_overdue %} overdue-task{% endif %}">
+          <div class="rank">{% if loop.first %}<span class="top-crown">★</span>{% endif %}{{ '%02d'|format(loop.index) }}</div>
+          <div class="task-info">
+            <div class="task-meta"><small>{{ item.course }}</small>{% if loop.first %}<span class="top-pick-badge">Top priority</span>{% endif %}<span class="due-badge {{ item.deadline_status }}">{{ item.due_label }}</span></div>
+            <div class="task-title-line">
+              <h3><a href="{{ url_for('main.assignment_detail', assignment_id=item.id) }}">{{ item.title }}</a></h3>
+              <div class="task-actions"><a class="edit-link" href="{{ url_for('main.edit_assignment', assignment_id=item.id) }}" aria-label="Edit {{ item.title }}"><span aria-hidden="true">✎</span> Edit</a><button class="delete-link" type="button" data-delete-open data-delete-name="{{ item.title }}" data-delete-url="{{ url_for('main.delete_assignment_page', assignment_id=item.id) }}" aria-label="Delete {{ item.title }}"><span aria-hidden="true">×</span> Delete</button></div>
+            </div>
+            <form class="progress-form" method="post" action="{{ url_for('main.update_assignment_progress', assignment_id=item.id) }}">
+              <label for="progress-{{ item.id }}">Progress <output data-progress-output>{{ item.progress }}%</output></label>
+              <div class="progress-input-row"><input id="progress-{{ item.id }}" name="progress" type="range" min="0" max="100" value="{{ item.progress }}" data-progress-input><button type="submit" name="action" value="save_progress">Save</button><button class="complete-button" type="submit" name="action" value="mark_complete">✓ Mark complete</button></div>
+            </form>
+            <div class="meter"><i style="width: {{ item.progress }}%"></i></div>
+            <details class="score-explanation">
+              <summary aria-controls="score-details-{{ item.id }}"><span class="explain-icon" aria-hidden="true">?</span>Why this score?<span class="explain-chevron" aria-hidden="true">⌄</span></summary>
+              <div class="explanation-body" id="score-details-{{ item.id }}" role="region" aria-label="Priority explanation for {{ item.title }}">
+                <div class="explanation-heading"><div><span class="score-band {{ item.priority_band }}">{{ item.priority_band }} priority</span><h4>{{ item.priority_score|int }} out of 100</h4></div><p>{{ item.priority_explanation }}</p></div>
+                <div class="factor-list">
+                  {% for factor in item.score_factors %}
+                  <div class="factor-row {{ factor.key }}">
+                    <div class="factor-heading"><div><b>{{ factor.label }}</b><span>{{ factor.value }}</span></div><strong class="factor-points{% if factor.points < 0 %} negative{% endif %}">{{ '+' if factor.points > 0 else '' }}{{ factor.points }}</strong></div>
+                    <div class="factor-track" aria-hidden="true"><i style="width: {{ factor.percent }}%"></i></div>
+                    <p>{{ factor.explanation }}</p>
+                  </div>
+                  {% endfor %}
+                </div>
+                <p class="formula-note">Score = deadline + difficulty + course impact + time fit − progress reduction, capped from 0–100.</p>
+              </div>
+            </details>
+          </div>
+          <div class="task-score"><b>{{ item.priority_score|int }}</b><span>score</span></div>
+        </article>
+        {% endfor %}
+        {% if not assignments %}<div class="empty-state"><h3>Your active queue is clear.</h3><p>Add an assignment or review your completed work below.</p></div>{% endif %}
+      </section>
+
+      <section class="panel completed-queue">
+        <div class="panel-title"><div><span>COMPLETED</span><h2>Finished work</h2></div><span class="completed-count">{{ completed_assignments|length }}</span></div>
+        {% for item in completed_assignments %}
+        <article class="completed-row">
+          <div class="completed-check">✓</div>
+          <div><small>{{ item.course }}</small><h3><a href="{{ url_for('main.assignment_detail', assignment_id=item.id) }}">{{ item.title }}</a></h3><span>{{ item.progress }}% progress</span></div>
+          <form method="post" action="{{ url_for('main.update_assignment_progress', assignment_id=item.id) }}"><button type="submit" name="action" value="mark_incomplete">Mark incomplete</button></form>
+        </article>
+        {% endfor %}
+        {% if not completed_assignments %}<p class="completed-empty">Completed assignments will move here.</p>{% endif %}
+      </section>
+    </div>
+
     <aside class="side-stack">
-      <section
-        class="panel focus"
-        data-focus-card
-        data-assignment-id="{{ recommended.id }}"
-        data-assignment-title="{{ recommended.title }}"
-        data-assignment-progress="{{ recommended.progress }}"
-      >
-        <span class="kicker">Recommended block</span>
-        <div class="timer">50:00</div>
-        <p data-focus-title>{{ recommended.title }}</p>
-        <button class="button ghost" data-focus>Begin focus</button>
+      <section class="panel focus top-focus focus-timer" data-focus-root data-active-url="{{ url_for('main.active_focus_session_api') }}">
+        {% if active_focus %}
+        <span class="kicker">Focus session</span>
+        <span class="focus-state {{ active_focus.status }}" data-focus-state>{{ active_focus.status }}</span>
+        <h3 data-focus-title>{{ active_focus.assignment_title }}</h3>
+        <div class="timer live-timer" role="timer" aria-label="Focus time remaining" data-focus-display data-session-id="{{ active_focus.id }}" data-status="{{ active_focus.status }}" data-remaining-seconds="{{ active_focus.remaining_seconds }}">{{ '%02d:%02d'|format(active_focus.remaining_seconds // 60, active_focus.remaining_seconds % 60) }}</div>
+        <p class="focus-intent">{{ active_focus.planned_minutes }}-minute focus block · persists across refreshes</p>
+        <div class="focus-controls">
+          <button class="focus-control pause" type="button" data-focus-pause {% if active_focus.status != 'running' %}hidden{% endif %}>Pause</button>
+          <button class="focus-control resume" type="button" data-focus-resume {% if active_focus.status != 'paused' %}hidden{% endif %}>Resume</button>
+          <button class="focus-control end" type="button" data-focus-end>End session</button>
+        </div>
+        <p class="focus-message" role="status" aria-live="polite" data-focus-message></p>
+        {% else %}
+        <span class="kicker">#1 recommendation</span>
+        {% if recommended %}<div class="recommendation-score"><b>{{ recommended.priority_score|int }}</b><span>priority score</span></div><h3>{{ recommended.title }}</h3><p class="recommendation-due {{ recommended.deadline_status }}">{{ recommended.due_label }}</p><p class="time-fit {{ 'fits' if recommended.fits_available_time else 'exceeds' }}"><span aria-hidden="true">{{ '✓' if recommended.fits_available_time else '↗' }}</span>{{ recommended.time_fit_label }}</p><div class="timer">{{ recommended_focus_minutes }}:00</div><button class="button ghost" type="button" data-focus {% if available_minutes == 0 %}disabled{% endif %} data-focus-start data-assignment-id="{{ recommended.id }}" data-planned-minutes="{{ recommended_focus_minutes }}">Start focus block</button>{% else %}<div class="timer">—</div><p>Your active queue is clear</p><button class="button ghost" type="button" disabled>Start focus block</button>{% endif %}
+        <p class="focus-message" role="status" aria-live="polite" data-focus-message></p>
+        {% endif %}
       </section>
-      <section class="panel integrations">
-        <h3>Connected world</h3>
-        <div><span>G</span>Google Calendar <b>Ready</b></div>
-        <div><span>N</span>Notion <b>Ready</b></div>
-        <small>Cached plan available if sync fails</small>
+      <section class="panel focus-history" aria-labelledby="focus-history-title">
+        <div class="history-heading"><div><span class="kicker">Recent activity</span><h3 id="focus-history-title">Focus history</h3></div><span class="history-count">{{ focus_history|length }}</span></div>
+        {% for session in focus_history %}
+        <article class="history-row">
+          <span class="history-status {{ session.status }}" aria-label="{{ session.status }} session">{{ '✓' if session.status == 'completed' else '→' }}</span>
+          <div class="history-copy"><h4>{{ session.assignment_title }}</h4><p>{{ session.ended_at[:10] }} · {{ session.planned_minutes }} min planned</p></div>
+          <div class="history-duration"><b>{{ session.completed_seconds // 60 }}:{{ '%02d'|format(session.completed_seconds % 60) }}</b><span>{{ 'completed' if session.status == 'completed' else 'ended early' }}</span></div>
+        </article>
+        {% endfor %}
+        {% if not focus_history %}<div class="history-empty"><span aria-hidden="true">◷</span><p>Finish a focus block and your recent study history will appear here.</p></div>{% endif %}
       </section>
+      <section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section>
     </aside>
   </div>
 </section>
-
-<dialog id="task-dialog">
-  <button class="dialog-close" aria-label="Close">x</button>
-  <span class="kicker">Quick capture</span>
-  <h2>Add an assignment</h2>
-  <p>The complete form arrives in the next build. This scaffold already has the data model ready.</p>
-  <button class="button dialog-close">Got it</button>
-</dialog>
-
-<dialog id="progress-dialog">
-  <form method="dialog" data-progress-form>
-    <button class="dialog-close" type="button" data-progress-close aria-label="Close">x</button>
-    <span class="kicker">Focus complete</span>
-    <h2>Update assignment progress</h2>
-    <p data-progress-copy></p>
-    <label for="progress-range">Progress</label>
-    <div class="progress-control">
-      <input id="progress-range" name="progress" type="range" min="0" max="100" step="1" data-progress-range>
-      <input aria-label="Progress percent" type="number" min="0" max="100" step="1" data-progress-number>
-      <span>%</span>
-    </div>
-    <div class="dialog-actions">
-      <button class="button ghost" type="submit" data-skip-progress>Finish without changes</button>
-      <button class="button" type="submit" data-save-progress>Save progress</button>
-    </div>
-  </form>
-</dialog>
+{% include "_delete_dialog.html" %}
 {% endblock %}

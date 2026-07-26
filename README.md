@@ -12,8 +12,21 @@ This repository is an intentionally lean hackathon scaffold: it runs, demonstrat
 - SQLAlchemy models for users, assignments, progress, integration state, cache, and retries
 - Explainable priority-scoring engine
 - Landing page and interactive dashboard prototype
-- Google Calendar and Notion integration boundaries with cached fallback behavior
-- 10 unit and route tests
+- Google Calendar and Notion integration boundaries with cached fallback beha
+vior
+- User registration with validation, secure password hashing, and session sign-in
+- Sign-in, sign-out, protected routes, and environment-aware session security
+- User-scoped assignment and integration queries with non-revealing authorization errors
+- Database-backed assignment form with ranking inputs and validation
+- Assignment editing with shared validation and immediate priority recalculation
+- Confirmed assignment deletion from the dashboard and detail view
+- Inline progress updates, completion controls, and active/completed queues
+- Deterministic database priority queue with top-pick and overdue states
+- Account-level study availability with presets and time-fit explanations
+- Per-assignment score breakdowns with deterministic plain-language explanations
+- Persistent focus-session timer with pause, resume, completion, refresh recovery, and accessible controls
+- User-scoped recent focus history with frozen completed durations
+- 129 unit, authentication, authorization, assignment, progress, ranking, availability, explanation, focus-session, migration, and route tests
 - Architecture diagram, Kanban board, and standup notes
 
 ## Quick start

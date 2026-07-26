@@ -10,7 +10,6 @@
 
 ## Ready
 
-- [ ] User registration and sign-in
 - [ ] Assignment create/edit/delete flow
 - [ ] Google Calendar OAuth implementation
 - [ ] Notion OAuth implementation
@@ -28,4 +27,15 @@
 - [x] Two-page visual concept
 - [x] Integration fallback contract
 - [x] Initial test suite
-
+- [x] User registration with validation and secure password hashing
+- [x] Sign-in, sign-out, protected routes, and secure sessions
+- [x] Cross-user data isolation for assignments and integrations
+- [x] Database-backed assignment creation and validation
+- [x] Ownership-protected assignment editing and live re-ranking
+- [x] Confirmed, ownership-protected assignment deletion
+- [x] Inline progress tracking and separate completed-work queue
+- [x] Resilient database-backed priority queue with overdue handling
+- [x] Account-persisted study availability and time-fit recommendations
+- [x] Deterministic five-factor priority explanations on every active task
+- [x] Persistent focus-session timer with pause, resume, end, and refresh recovery
+- [x] User-scoped recent focus history and completed-duration persistence
