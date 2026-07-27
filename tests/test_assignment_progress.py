@@ -5,6 +5,7 @@ import pytest
 
 from planguard import create_app, db
 from planguard.models import Assignment, User
+from planguard.services.assignments import set_assignment_status
 
 
 @pytest.fixture
@@ -133,3 +134,35 @@ def test_anonymous_user_cannot_change_progress(progress_setup):
     response = app.test_client().post(f'/assignments/{ids["active"]}/progress', data={"action": "mark_complete"})
     assert response.status_code == 302
     assert "/login?next=" in response.headers["Location"]
+
+
+def test_assignment_status_service_accepts_boundary_progress(progress_setup):
+    app, ids = progress_setup
+    with app.app_context():
+        assignment = db.session.get(Assignment, ids["active"])
+        updated, errors = set_assignment_status(assignment, progress=0)
+        assert errors == {}
+        assert updated.progress == 0
+
+        updated, errors = set_assignment_status(assignment, progress=100)
+        assert errors == {}
+        assert updated.progress == 100
+
+
+def test_assignment_status_service_rejects_invalid_progress(progress_setup):
+    app, ids = progress_setup
+    with app.app_context():
+        assignment = db.session.get(Assignment, ids["active"])
+        for value in (-1, 101, "50", True):
+            updated, errors = set_assignment_status(assignment, progress=value)
+            assert updated is None
+            assert errors == {"progress": "Progress must be a whole number from 0 to 100."}
+
+
+def test_assignment_status_service_does_not_round_progress(progress_setup):
+    app, ids = progress_setup
+    with app.app_context():
+        assignment = db.session.get(Assignment, ids["active"])
+        updated, errors = set_assignment_status(assignment, progress=54)
+        assert errors == {}
+        assert updated.progress == 54
