@@ -97,6 +97,17 @@
         {% endfor %}
         {% if not focus_history %}<div class="history-empty"><span aria-hidden="true">◷</span><p>Finish a focus block and your recent study history will appear here.</p></div>{% endif %}
       </section>
+      <section class="panel planned-blocks" aria-labelledby="planned-blocks-title">
+        <div class="history-heading"><div><span class="kicker">Scheduled</span><h3 id="planned-blocks-title">Planned focus</h3></div><span class="history-count">{{ upcoming_blocks|length }}</span></div>
+        {% for block in upcoming_blocks %}
+        <article class="history-row">
+          <span class="history-status scheduled" aria-label="scheduled focus block">+</span>
+          <div class="history-copy"><h4>{{ block.assignment.title if block.assignment else 'Planned focus block' }}</h4><p>{{ block.starts_at.strftime('%Y-%m-%d') }} - {{ block.starts_at.strftime('%I:%M %p') }} to {{ block.ends_at.strftime('%I:%M %p') }}</p></div>
+          <form method="post" action="{{ url_for('main.start_scheduled_focus_block', block_id=block.id) }}"><button type="submit">Start</button></form>
+        </article>
+        {% endfor %}
+        {% if not upcoming_blocks %}<div class="history-empty"><span aria-hidden="true">+</span><p>Accepted focus blocks will appear here.</p></div>{% endif %}
+      </section>
       <section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section>
     </aside>
   </div>

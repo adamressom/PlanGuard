@@ -51,6 +51,41 @@ class Assignment(db.Model):
         return self.course_weight
 
 
+class WeeklyAvailability(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    weekday = db.Column(db.Integer, nullable=False)
+    starts_at_time = db.Column(db.Time, nullable=False)
+    ends_at_time = db.Column(db.Time, nullable=False)
+    label = db.Column(db.String(120), nullable=False, default="")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class AvailabilityOverride(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    date = db.Column(db.Date, nullable=False, index=True)
+    starts_at_time = db.Column(db.Time, nullable=False)
+    ends_at_time = db.Column(db.Time, nullable=False)
+    mode = db.Column(db.String(20), nullable=False, default="available")
+    label = db.Column(db.String(120), nullable=False, default="")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class ScheduledFocusBlock(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey("assignment.id"), nullable=False, index=True)
+    starts_at = db.Column(db.DateTime, nullable=True, index=True)
+    ends_at = db.Column(db.DateTime, nullable=True)
+    planned_minutes = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(20), nullable=False, default="scheduled", index=True)
+    source = db.Column(db.String(40), nullable=False, default="recommended")
+    note = db.Column(db.String(255), nullable=False, default="")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    assignment = db.relationship("Assignment")
+
+
 class IntegrationState(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)

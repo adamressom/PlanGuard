@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Schedule {{ assignment.title }} - PlanGuard{% endblock %}
+{% block content %}
+<section class="dashboard shell schedule-page">
+  <div class="dash-heading">
+    <div><span class="kicker">{{ assignment.course }}</span><h1>Schedule {{ assignment.title }}.</h1></div>
+    <div class="schedule-heading-actions"><a class="text-link" href="{{ url_for('main.edit_assignment', assignment_id=assignment.id) }}">Edit assignment</a><a class="button small" href="{{ url_for('main.availability_page') }}">Edit availability</a></div>
+  </div>
+  {% if dismissed %}
+  <section class="panel schedule-callout">
+    <h2>Suggestions dismissed</h2>
+    <p>PlanGuard will remember that you dismissed scheduling suggestions for this assignment.</p>
+    <a class="button ghost" href="{{ url_for('main.dashboard') }}">Return to dashboard</a>
+  </section>
+  {% else %}
+  <div class="schedule-grid">
+    <section class="panel">
+      <div class="panel-title"><div><span>RECOMMENDED</span><h2>Suggested blocks</h2></div><span>{{ recommendation.scheduled_minutes }} of {{ recommendation.requested_minutes }} min</span></div>
+      {% if recommendation.is_partial %}<p class="schedule-warning">Only part of this assignment fits in your available time right now.</p>{% endif %}
+      {% for suggestion in recommendation.suggestions %}
+      <article class="suggestion-row">
+        <div><b>{{ suggestion.starts_at.strftime('%a %b %d') }}</b><span>{{ suggestion.starts_at.strftime('%I:%M %p') }} - {{ suggestion.ends_at.strftime('%I:%M %p') }}</span>{% if suggestion.warning %}<small>{{ suggestion.warning }}</small>{% endif %}</div>
+        <form method="post">
+          <input type="hidden" name="action" value="accept">
+          <input type="hidden" name="starts_at" value="{{ suggestion.starts_at.isoformat() }}">
+          <input type="hidden" name="planned_minutes" value="{{ suggestion.planned_minutes }}">
+          {% if suggestion.warning %}<input type="hidden" name="confirm_transition" value="1">{% endif %}
+          <button class="button small" type="submit">Accept</button>
+        </form>
+      </article>
+      {% endfor %}
+      {% if not recommendation.suggestions %}
+      <div class="schedule-empty">
+        <h3>No open study window found.</h3>
+        <p>Add availability or block less time as unavailable, then PlanGuard can suggest a focus block.</p>
+      </div>
+      {% endif %}
+      {% if recommendation.reschedule_conflicts %}
+      <div class="schedule-warning">
+        <b>Make room?</b>
+        <p>This assignment is meaningfully higher priority than another scheduled block. You can adjust manually below before replacing anything.</p>
+      </div>
+      {% endif %}
+      <form method="post" class="dismiss-form"><button name="action" value="dismiss" type="submit">Dismiss suggestions</button></form>
+    </section>
+    <section class="panel">
+      <div class="panel-title"><div><span>MANUAL</span><h2>Choose a time</h2></div></div>
+      {% if warnings %}
+      <div class="schedule-warning">
+        {% for warning in warnings %}<p>{{ warning }}</p>{% endfor %}
+        <form method="post">
+          <input type="hidden" name="action" value="adjust">
+          <input type="hidden" name="starts_at" value="{{ proposed_start.isoformat() }}">
+          <input type="hidden" name="planned_minutes" value="{{ proposed_minutes }}">
+          <input type="hidden" name="confirm_transition" value="1">
+          <button class="button small" type="submit">Keep it here</button>
+        </form>
+      </div>
+      {% endif %}
+      {% if errors %}
+      <div class="schedule-error">
+        {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+        {% if focus_conflicts %}
+        <div class="conflict-actions">
+          {% for option, label in (('combine', 'Combine'), ('replace_existing', 'Replace'), ('reschedule_existing', 'Reschedule existing'), ('keep_current_plan', 'Keep current plan')) %}
+          <form method="post">
+            <input type="hidden" name="action" value="adjust">
+            <input type="hidden" name="starts_at" value="{{ proposed_start.isoformat() }}">
+            <input type="hidden" name="planned_minutes" value="{{ proposed_minutes }}">
+            <input type="hidden" name="conflict_resolution" value="{{ option }}">
+            <button type="submit">{{ label }}</button>
+          </form>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+      <form class="schedule-form" method="post">
+        <input type="hidden" name="action" value="adjust">
+        <label>Start<input name="starts_at" type="datetime-local" value="{{ proposed_start.strftime('%Y-%m-%dT%H:%M') if proposed_start else '' }}" required></label>
+        <label>Duration<input name="planned_minutes" type="number" min="1" max="240" value="{{ proposed_minutes or (assignment.estimated_minutes if assignment.estimated_minutes < 90 else 90) }}" required></label>
+        <button class="button" type="submit">Schedule block</button>
+      </form>
+    </section>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
