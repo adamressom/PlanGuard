@@ -1,6 +1,8 @@
 # Standup notes
 
-## Day 1 — Foundation
+## Adam R.
+
+## Day 1 - Foundation
 
 **Yesterday / completed:** Defined the value proposition, information architecture, data model, and visual direction. Scaffolded the application and isolated the ranking logic.
 
@@ -10,11 +12,16 @@
 
 **Demo story:** A student opens PlanGuard, sees one clearly recommended task, understands why it ranks first, and starts a protected focus block even if an external API is temporarily unavailable.
 
-## Issue #13 - Focus Session Progress Update
+# Stand Up 25/7/2026
 
-**Completed / added:** Vetted and implemented the demo-safe foundation through Task 9. The dashboard now uses a swappable `get_assignments_for_dashboard()` helper, demo assignments have stable IDs, progress overrides can be stored in the Flask session, and `/api/focus-sessions/end` supports ending a linked focus session with or without a progress value. Added strict assignment progress service errors/helpers for invalid progress and missing assignments. The dashboard now passes the top recommendation into the focus card, includes assignment data hooks, and renders a post-focus progress dialog. The focus button flow is now `Begin focus` -> `Finish focus` -> progress dialog.
+## Josh P.
 
-**Still needed to complete #13:** Task 10a syncs the progress slider and number input. Task 10 submits saved progress from the dialog. Task 11 supports finishing without changes from the dialog. Task 12 refreshes the priority queue/recommended focus card after the API response. Task 13 adds minimal styling for the progress dialog controls. Task 14 adds service tests. Task 15 adds route tests. Task 16 verifies the dashboard exposes the workflow. Task 17 runs the test suite and records any environment limits.
+**Yesterday / completed:** Vetted and implemented Issue #13 Tasks 10a through 16 against the current database-backed focus workflow. Active focus sessions now open a progress dialog before ending. The dialog uses synced range/number controls with `step="10"`, clamps browser-entered values from 0 to 100, and supports saving assignment progress without ending the focus session. `End focus only` confirms before ending without a progress update. Assignment progress saves and focus-session end responses now include refreshed ranked assignments for in-place queue updates. Added minimal dialog styling and focused service, route, and dashboard-contract tests.
 
-**Future notes:** Demo progress is intentionally stored in session for now so the app can later swap `get_assignments_for_dashboard()` to database-backed assignments without rewriting the frontend contract. Later assignment progress should support checklist/subtask-derived completion, and the dashboard should handle empty assignment states before reading the first recommendation.
+**Today / next:** Continue with the next vetted task after the focus-session progress workflow. Consider replacing browser `confirm()` prompts with styled modal confirmations and adding fuller client-side coverage for in-place DOM refresh behavior.
 
+**Blockers / risks:** None for Issue #13 after local setup. A local `.venv` is required for tests because the global Python environment did not have Flask/SQLAlchemy installed.
+
+**Demo story:** A student starts a focus block, chooses to update assignment progress in 10% increments, can keep working after saving progress, or can intentionally end the session without changing assignment progress.
+
+**Verification:** Created a local `.venv`, installed pinned `requirements.txt` dependencies, and ran `.venv\Scripts\python -m pytest`. Full suite passed: 136 passed.

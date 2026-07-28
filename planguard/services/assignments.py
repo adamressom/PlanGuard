@@ -108,7 +108,7 @@ def remove_assignment(assignment):
 def set_assignment_status(assignment, progress=None, completed=None):
     errors = {}
     if progress is not None:
-        if not isinstance(progress, int) or not 0 <= progress <= 100:
+        if isinstance(progress, bool) or not isinstance(progress, int) or not 0 <= progress <= 100:
             errors["progress"] = "Progress must be a whole number from 0 to 100."
     if completed is not None and not isinstance(completed, bool):
         errors["completed"] = "Completion status must be true or false."

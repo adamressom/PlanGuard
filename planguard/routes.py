@@ -41,6 +41,25 @@ def api_not_found():
     return jsonify(error="Record not found."), 404
 
 
+def ranked_active_assignments_payload():
+    active_records = db.session.scalars(
+        owned_records(Assignment).where(Assignment.completed.is_(False))
+    ).all()
+    ranked = rank_assignments(
+        [assignment_priority_input(item) for item in active_records],
+        available_minutes=g.user.available_study_minutes,
+    )
+    return [
+        {
+            **assignment,
+            "detail_url": url_for("main.assignment_detail", assignment_id=assignment["id"]),
+            "edit_url": url_for("main.edit_assignment", assignment_id=assignment["id"]),
+            "delete_url": url_for("main.delete_assignment_page", assignment_id=assignment["id"]),
+        }
+        for assignment in ranked
+    ]
+
+
 @main.get("/")
 def landing():
     return render_template("landing.html")
@@ -62,6 +81,10 @@ def dashboard():
         available_minutes=g.user.available_study_minutes,
     )
     active_focus = active_focus_for_user(g.user.id)
+    active_focus_progress = None
+    if active_focus and active_focus.assignment_id:
+        active_focus_assignment = get_owned_record(Assignment, active_focus.assignment_id)
+        active_focus_progress = active_focus_assignment.progress if active_focus_assignment else 0
     focus_history = recent_focus_history(g.user.id)
     recommended = active_assignments[0] if active_assignments else None
     recommended_focus_minutes = 0
@@ -78,6 +101,7 @@ def dashboard():
         recommended=recommended,
         available_minutes=g.user.available_study_minutes,
         active_focus=focus_payload(active_focus) if active_focus else None,
+        active_focus_progress=active_focus_progress,
         recommended_focus_minutes=recommended_focus_minutes,
         focus_history=[focus_payload(item) for item in focus_history],
     )
@@ -184,7 +208,7 @@ def end_focus_session_api(focus_session_id):
         end_focus_session(focus_session, timer_complete=data.get("reason") == "timer_complete")
     except FocusStateError as exc:
         return jsonify(error=str(exc)), 409
-    return jsonify(session=focus_payload(focus_session))
+    return jsonify(session=focus_payload(focus_session), assignments=ranked_active_assignments_payload())
 
 
 @main.route("/assignments/new", methods=("GET", "POST"))
@@ -304,7 +328,7 @@ def update_assignment(assignment_id):
 
     data = request.get_json(silent=True) or {}
     if "progress" in data:
-        if not isinstance(data["progress"], int) or not 0 <= data["progress"] <= 100:
+        if isinstance(data["progress"], bool) or not isinstance(data["progress"], int) or not 0 <= data["progress"] <= 100:
             return jsonify(error="Progress must be an integer from 0 to 100."), 400
         assignment.progress = data["progress"]
     if "completed" in data:
@@ -312,7 +336,7 @@ def update_assignment(assignment_id):
             return jsonify(error="Completed must be true or false."), 400
         assignment.completed = data["completed"]
     db.session.commit()
-    return jsonify(assignment_payload(assignment))
+    return jsonify(**assignment_payload(assignment), assignments=ranked_active_assignments_payload())
 
 
 @main.delete("/api/assignments/<int:assignment_id>")

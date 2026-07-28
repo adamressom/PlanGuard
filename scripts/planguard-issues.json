@@ -1,0 +1,342 @@
+{
+  "labels": [
+    {
+      "name": "feature",
+      "description": "User-facing functionality"
+    },
+    {
+      "name": "authentication",
+      "description": "Registration, login, sessions, and access"
+    },
+    {
+      "name": "backend",
+      "description": "Server-side implementation"
+    },
+    {
+      "name": "frontend",
+      "description": "Templates, styling, and browser behavior"
+    },
+    {
+      "name": "security",
+      "description": "Security and privacy work"
+    },
+    {
+      "name": "assignments",
+      "description": "Assignment management"
+    },
+    {
+      "name": "priority-engine",
+      "description": "Priority ranking and explanations"
+    },
+    {
+      "name": "focus-sessions",
+      "description": "Focus timer and study-session tracking"
+    },
+    {
+      "name": "scheduling",
+      "description": "Calendar-aware study scheduling"
+    },
+    {
+      "name": "integration",
+      "description": "External provider integration"
+    },
+    {
+      "name": "google-calendar",
+      "description": "Google Calendar integration"
+    },
+    {
+      "name": "notion",
+      "description": "Notion integration"
+    },
+    {
+      "name": "api",
+      "description": "JSON API work"
+    },
+    {
+      "name": "database",
+      "description": "Database schema and persistence"
+    },
+    {
+      "name": "infrastructure",
+      "description": "Development or production infrastructure"
+    },
+    {
+      "name": "testing",
+      "description": "Automated test coverage"
+    },
+    {
+      "name": "accessibility",
+      "description": "Accessibility improvements"
+    },
+    {
+      "name": "user-experience",
+      "description": "Dashboard and interaction states"
+    },
+    {
+      "name": "maintenance",
+      "description": "Cleanup and maintenance"
+    }
+  ],
+  "milestones": [
+    {
+      "title": "Milestone 1: Real Assignments"
+    },
+    {
+      "title": "Milestone 2: Trustworthy Priority Queue"
+    },
+    {
+      "title": "Milestone 3: Focus Workflow"
+    },
+    {
+      "title": "Milestone 4: Connected Planning"
+    },
+    {
+      "title": "Milestone 5: Production Readiness"
+    }
+  ],
+  "issues": [
+    {
+      "title": "Implement user registration",
+      "milestone": "Milestone 1: Real Assignments",
+      "labels": [
+        "feature",
+        "authentication",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a student, I can create an account so that my planning data is private.\n\n## Acceptance criteria\n\n- [ ] Registration accepts email, display name, and password.\n- [ ] Email addresses must be unique.\n- [ ] Passwords are securely hashed and never stored as plain text.\n- [ ] Invalid fields produce clear validation messages.\n- [ ] Successful registration signs the user in or redirects them to sign in.\n- [ ] Registration behavior is covered by automated tests.\n\n## Implementation tasks\n\n- [ ] Add or update the registration form.\n- [ ] Add registration route and validation.\n- [ ] Hash passwords using an appropriate Flask-compatible library.\n- [ ] Handle duplicate accounts.\n- [ ] Add registration tests.\n"
+    },
+    {
+      "title": "Implement sign-in and sign-out",
+      "milestone": "Milestone 1: Real Assignments",
+      "labels": [
+        "feature",
+        "authentication",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a student, I can sign in and sign out so that I can securely access my workspace.\n\n## Acceptance criteria\n\n- [ ] Valid credentials create an authenticated session.\n- [ ] Invalid credentials show a useful error without revealing sensitive details.\n- [ ] Users can sign out.\n- [ ] Dashboard and app routes reject anonymous users.\n- [ ] Sessions use secure configuration appropriate to the environment.\n- [ ] Authentication flows are covered by tests.\n\n## Implementation tasks\n\n- [ ] Add sign-in and sign-out routes.\n- [ ] Add authentication session management.\n- [ ] Protect private routes.\n- [ ] Add authentication tests.\n"
+    },
+    {
+      "title": "Enforce user data isolation",
+      "milestone": "Milestone 1: Real Assignments",
+      "labels": [
+        "security",
+        "authentication",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a student, I can only access my own assignments and integration settings so that my data remains private.\n\n## Acceptance criteria\n\n- [ ] Every user-owned query is scoped to the signed-in user.\n- [ ] A user cannot view, update, or delete another user's records.\n- [ ] Unauthorized access returns an appropriate error.\n- [ ] User isolation is tested for both page routes and JSON endpoints.\n\n## Implementation tasks\n\n- [ ] Audit all user-owned database queries.\n- [ ] Add authorization helpers or service-layer checks.\n- [ ] Add cross-user access tests.\n"
+    },
+    {
+      "title": "Create database-backed assignments",
+      "milestone": "Milestone 1: Real Assignments",
+      "labels": [
+        "feature",
+        "assignments",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a student, I can add an assignment so that PlanGuard can rank it.\n\n## Acceptance criteria\n\n- [ ] A signed-in user can create an assignment.\n- [ ] Supported fields include title, course, deadline, difficulty, estimated minutes, course impact, progress, completion status, notes, and optional provider ID.\n- [ ] Required fields and numeric ranges are validated.\n- [ ] The assignment is stored in the database and belongs to the signed-in user.\n- [ ] The new assignment appears on the dashboard.\n- [ ] Creation success and failure cases are tested.\n\n## Implementation tasks\n\n- [ ] Finalize the Assignment model.\n- [ ] Build the assignment form.\n- [ ] Add create route and service logic.\n- [ ] Replace hardcoded dashboard data.\n- [ ] Add tests.\n"
+    },
+    {
+      "title": "Edit existing assignments",
+      "milestone": "Milestone 1: Real Assignments",
+      "labels": [
+        "feature",
+        "assignments",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a student, I can edit an assignment so that my plan stays accurate.\n\n## Acceptance criteria\n\n- [ ] A user can open an edit form populated with the assignment's current values.\n- [ ] Updates validate required fields and sensible ranges.\n- [ ] Only the owning user can edit the assignment.\n- [ ] Saved changes immediately affect the dashboard and priority ranking.\n- [ ] Update behavior is covered by tests.\n\n## Implementation tasks\n\n- [ ] Add edit UI.\n- [ ] Add update route and service logic.\n- [ ] Recalculate priorities after updates.\n- [ ] Add tests.\n"
+    },
+    {
+      "title": "Delete assignments",
+      "milestone": "Milestone 1: Real Assignments",
+      "labels": [
+        "feature",
+        "assignments",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a student, I can delete an assignment so that removed work no longer appears in my plan.\n\n## Acceptance criteria\n\n- [ ] A user can request deletion from the dashboard or assignment detail view.\n- [ ] The UI asks for confirmation before deletion.\n- [ ] Only the owning user can delete the assignment.\n- [ ] Deleted assignments no longer appear in the queue.\n- [ ] Delete behavior is covered by tests.\n\n## Implementation tasks\n\n- [ ] Add delete control and confirmation.\n- [ ] Add delete route and authorization.\n- [ ] Decide how related focus sessions are handled.\n- [ ] Add tests.\n"
+    },
+    {
+      "title": "Track assignment completion and progress",
+      "milestone": "Milestone 1: Real Assignments",
+      "labels": [
+        "feature",
+        "assignments"
+      ],
+      "body": "## User story\n\nAs a student, I can mark an assignment complete or update its progress so that PlanGuard reflects my current workload.\n\n## Acceptance criteria\n\n- [ ] Progress accepts values from 0 through 100.\n- [ ] A user can mark an assignment complete or incomplete.\n- [ ] Completed assignments are removed from or visually separated from the active queue.\n- [ ] Changes trigger priority recalculation.\n- [ ] Completion and progress behavior is tested.\n\n## Implementation tasks\n\n- [ ] Add progress and completion controls.\n- [ ] Persist changes.\n- [ ] Update active/completed dashboard sections.\n- [ ] Add tests.\n"
+    },
+    {
+      "title": "Build database-backed priority queue",
+      "milestone": "Milestone 2: Trustworthy Priority Queue",
+      "labels": [
+        "feature",
+        "priority-engine",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a student, I can see my assignments ranked by priority so that I know what to work on next.\n\n## Acceptance criteria\n\n- [ ] Active assignments are loaded from the signed-in user's database records.\n- [ ] The existing deterministic priority engine ranks each active assignment.\n- [ ] The highest-priority assignment is clearly highlighted.\n- [ ] Overdue assignments are handled clearly.\n- [ ] Missing or edge-case data does not crash ranking.\n- [ ] Ranking behavior is covered by tests.\n\n## Implementation tasks\n\n- [ ] Connect dashboard queries to the priority service.\n- [ ] Sort active assignments by score.\n- [ ] Add top-recommendation UI.\n- [ ] Add overdue and edge-case handling.\n- [ ] Add tests.\n"
+    },
+    {
+      "title": "Support available study time",
+      "milestone": "Milestone 2: Trustworthy Priority Queue",
+      "labels": [
+        "feature",
+        "priority-engine",
+        "frontend"
+      ],
+      "body": "## User story\n\nAs a student, I can set my available study time so that recommendations fit my day.\n\n## Acceptance criteria\n\n- [ ] The user can enter or select available study minutes.\n- [ ] Priorities recalculate when availability changes.\n- [ ] Time-fit behavior is reflected in the recommendation.\n- [ ] Invalid values are rejected with clear feedback.\n- [ ] The preference persists for the expected session or account scope.\n\n## Implementation tasks\n\n- [ ] Add availability input.\n- [ ] Pass availability into the priority engine.\n- [ ] Decide and implement persistence.\n- [ ] Add tests.\n"
+    },
+    {
+      "title": "Explain each priority score",
+      "milestone": "Milestone 2: Trustworthy Priority Queue",
+      "labels": [
+        "feature",
+        "priority-engine",
+        "frontend"
+      ],
+      "body": "## User story\n\nAs a student, I can understand why an assignment received its score so that I trust the recommendation.\n\n## Acceptance criteria\n\n- [ ] Each assignment displays its final priority score.\n- [ ] The explanation includes deadline urgency, difficulty, course impact, time fit, and current progress.\n- [ ] A plain-language explanation states why the assignment ranks high or low.\n- [ ] The explanation is accessible from each assignment row.\n- [ ] Explanation output is deterministic and tested.\n\n## Implementation tasks\n\n- [ ] Extend the priority service to return factor details.\n- [ ] Create explanation copy rules.\n- [ ] Add explanation UI.\n- [ ] Add unit and route tests.\n"
+    },
+    {
+      "title": "Implement focus session timer",
+      "milestone": "Milestone 3: Focus Workflow",
+      "labels": [
+        "feature",
+        "focus-sessions",
+        "frontend"
+      ],
+      "body": "## User story\n\nAs a student, I can start a focus block from a recommendation so that I can begin studying quickly.\n\n## Acceptance criteria\n\n- [ ] A focus block can be started from the top recommendation.\n- [ ] The timer displays elapsed or remaining time.\n- [ ] The user can pause, resume, and end the session.\n- [ ] Refresh or navigation behavior is handled intentionally.\n- [ ] Timer controls are keyboard accessible.\n\n## Implementation tasks\n\n- [ ] Design focus-session states.\n- [ ] Build timer UI and client-side behavior.\n- [ ] Connect timer actions to persistence endpoints.\n- [ ] Add tests.\n"
+    },
+    {
+      "title": "Persist focus sessions and history",
+      "milestone": "Milestone 3: Focus Workflow",
+      "labels": [
+        "feature",
+        "focus-sessions",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a student, I can save completed focus sessions so that I can review my study history.\n\n## Acceptance criteria\n\n- [ ] Focus sessions belong to a user and optionally an assignment.\n- [ ] Start, pause, resume, and completion state changes are persisted as needed.\n- [ ] Completed duration is stored.\n- [ ] Recent focus history is visible.\n- [ ] A user cannot access another user's sessions.\n- [ ] Lifecycle behavior is tested.\n\n## Implementation tasks\n\n- [ ] Add FocusSession model and migration.\n- [ ] Add focus-session service and endpoints.\n- [ ] Add recent-history UI.\n- [ ] Add authorization and lifecycle tests.\n"
+    },
+    {
+      "title": "Update assignment progress after focus sessions",
+      "milestone": "Milestone 3: Focus Workflow",
+      "labels": [
+        "feature",
+        "focus-sessions",
+        "assignments"
+      ],
+      "body": "## User story\n\nAs a student, I can update assignment progress after a focus session so that future priorities adapt.\n\n## Acceptance criteria\n\n- [ ] Ending a linked focus session offers a progress update.\n- [ ] Progress remains between 0 and 100.\n- [ ] Saving progress triggers priority recalculation.\n- [ ] The user may finish a session without changing progress.\n- [ ] The workflow is tested.\n\n## Implementation tasks\n\n- [ ] Add post-session progress UI.\n- [ ] Update assignment service logic.\n- [ ] Refresh recommendation data.\n- [ ] Add tests.\n"
+    },
+    {
+      "title": "Recommend calendar-aware focus blocks",
+      "milestone": "Milestone 4: Connected Planning",
+      "labels": [
+        "feature",
+        "scheduling",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a student, I can receive focus-block suggestions that avoid existing commitments.\n\n## Acceptance criteria\n\n- [ ] PlanGuard represents available study windows.\n- [ ] Calendar events are treated as conflicts.\n- [ ] Suggested blocks fit the assignment's estimated effort when possible.\n- [ ] Large assignments may be split into multiple blocks.\n- [ ] Users can accept, adjust, or dismiss suggestions.\n- [ ] Scheduling behavior is tested.\n\n## Implementation tasks\n\n- [ ] Define scheduling data structures.\n- [ ] Implement conflict detection.\n- [ ] Implement block recommendation logic.\n- [ ] Build suggestion controls.\n- [ ] Add tests.\n"
+    },
+    {
+      "title": "Connect Google Calendar with OAuth",
+      "milestone": "Milestone 4: Connected Planning",
+      "labels": [
+        "feature",
+        "integration",
+        "google-calendar"
+      ],
+      "body": "## User story\n\nAs a student, I can connect Google Calendar so that PlanGuard avoids scheduling over existing events.\n\n## Acceptance criteria\n\n- [ ] The user can start the Google OAuth flow.\n- [ ] The callback validates state and handles provider errors.\n- [ ] Access and refresh tokens are stored securely.\n- [ ] Expired access tokens can be refreshed.\n- [ ] The user can disconnect the integration.\n- [ ] OAuth status handling is tested without requiring live provider calls.\n\n## Implementation tasks\n\n- [ ] Configure Google OAuth credentials.\n- [ ] Implement connect and callback routes.\n- [ ] Encrypt stored tokens.\n- [ ] Implement token refresh and disconnect.\n- [ ] Add mocked tests.\n"
+    },
+    {
+      "title": "Sync and cache Google Calendar events",
+      "milestone": "Milestone 4: Connected Planning",
+      "labels": [
+        "feature",
+        "integration",
+        "google-calendar"
+      ],
+      "body": "## User story\n\nAs a student, I can sync calendar events and continue using cached events when Google is unavailable.\n\n## Acceptance criteria\n\n- [ ] Connected users can fetch calendar events.\n- [ ] Successful results are cached with a last-synced timestamp.\n- [ ] Failed requests retry with bounded backoff.\n- [ ] Cached data is used when live sync fails.\n- [ ] The UI distinguishes live, cached, syncing, and error states.\n- [ ] Sync and fallback behavior is tested.\n\n## Implementation tasks\n\n- [ ] Implement calendar API client.\n- [ ] Add cache storage.\n- [ ] Add retry and fallback logic.\n- [ ] Add sync endpoint and UI state.\n- [ ] Add mocked tests.\n"
+    },
+    {
+      "title": "Connect and import assignments from Notion",
+      "milestone": "Milestone 4: Connected Planning",
+      "labels": [
+        "feature",
+        "integration",
+        "notion"
+      ],
+      "body": "## User story\n\nAs a student, I can connect Notion and import tasks so that I do not have to enter every assignment manually.\n\n## Acceptance criteria\n\n- [ ] The user can complete Notion OAuth.\n- [ ] Tokens are stored securely.\n- [ ] The user can choose a database or source.\n- [ ] Notion properties can be mapped to PlanGuard assignment fields.\n- [ ] Imported assignments belong to the signed-in user.\n- [ ] Existing provider IDs prevent duplicate imports.\n- [ ] Import and OAuth behavior is tested with mocks.\n\n## Implementation tasks\n\n- [ ] Implement OAuth connect and callback.\n- [ ] Build source selection and property mapping.\n- [ ] Implement import service.\n- [ ] Add duplicate detection and caching.\n- [ ] Add tests.\n"
+    },
+    {
+      "title": "Show truthful integration status",
+      "milestone": "Milestone 4: Connected Planning",
+      "labels": [
+        "feature",
+        "integration",
+        "frontend"
+      ],
+      "body": "## User story\n\nAs a student, I can see accurate integration status so that I know whether my plan is current.\n\n## Acceptance criteria\n\n- [ ] Disconnected integrations show Connect.\n- [ ] Active synchronization shows Syncing.\n- [ ] Synced appears only after a successful sync.\n- [ ] Cached fallback displays Using cached data.\n- [ ] Errors include a useful next action.\n- [ ] Last successful sync time is displayed.\n- [ ] Users can disconnect an integration.\n\n## Implementation tasks\n\n- [ ] Define integration state model.\n- [ ] Replace placeholder Ready labels.\n- [ ] Add status and disconnect endpoints.\n- [ ] Add UI-state tests.\n"
+    },
+    {
+      "title": "Add JSON API layer",
+      "milestone": "Milestone 5: Production Readiness",
+      "labels": [
+        "feature",
+        "api",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a developer, I can use consistent JSON endpoints so that the frontend and future integrations can interact with PlanGuard reliably.\n\n## Acceptance criteria\n\n- [ ] Assignment CRUD endpoints are available.\n- [ ] Focus-session endpoints are available.\n- [ ] A priority explanation endpoint is available.\n- [ ] Integration connect, status, and sync endpoints are available where appropriate.\n- [ ] Validation errors use a consistent JSON shape.\n- [ ] Authorization is enforced on every user-owned resource.\n- [ ] Success and failure cases are tested.\n\n## Implementation tasks\n\n- [ ] Define API response and error conventions.\n- [ ] Implement endpoint blueprints.\n- [ ] Add server-side validation.\n- [ ] Add API tests.\n"
+    },
+    {
+      "title": "Add Alembic or Flask-Migrate migrations",
+      "milestone": "Milestone 5: Production Readiness",
+      "labels": [
+        "infrastructure",
+        "database",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a developer, I can run database migrations so that schema changes are controlled.\n\n## Acceptance criteria\n\n- [ ] Flask-Migrate or Alembic is configured.\n- [ ] An initial migration captures the current schema.\n- [ ] Production does not rely on startup-only db.create_all().\n- [ ] Local and production database settings are supported.\n- [ ] Migration commands are documented.\n- [ ] Optional seed data is available for demos.\n\n## Implementation tasks\n\n- [ ] Add migration dependency and configuration.\n- [ ] Generate and review initial migration.\n- [ ] Remove production startup table creation.\n- [ ] Add seed command or script.\n- [ ] Document usage.\n"
+    },
+    {
+      "title": "Harden security and privacy controls",
+      "milestone": "Milestone 5: Production Readiness",
+      "labels": [
+        "security",
+        "backend"
+      ],
+      "body": "## User story\n\nAs a student, my credentials and integration tokens are protected so that my data remains private.\n\n## Acceptance criteria\n\n- [ ] Secrets come from secure environment configuration.\n- [ ] Passwords are hashed.\n- [ ] Forms use CSRF protection.\n- [ ] Session cookies use appropriate security flags.\n- [ ] OAuth credentials are encrypted at rest.\n- [ ] Sensitive provider data is not written to logs.\n- [ ] Authentication routes have basic rate limiting.\n- [ ] Security-critical behavior is tested.\n\n## Implementation tasks\n\n- [ ] Audit secret and session configuration.\n- [ ] Add CSRF protection.\n- [ ] Implement token encryption.\n- [ ] Sanitize provider error logging.\n- [ ] Add auth rate limiting.\n- [ ] Add security tests.\n"
+    },
+    {
+      "title": "Expand automated test coverage",
+      "milestone": "Milestone 5: Production Readiness",
+      "labels": [
+        "testing"
+      ],
+      "body": "## User story\n\nAs a developer, I can run a comprehensive test suite so that core PlanGuard workflows are protected.\n\n## Acceptance criteria\n\n- [ ] Tests cover authentication.\n- [ ] Tests cover assignment CRUD and user isolation.\n- [ ] Tests cover form and API validation.\n- [ ] Tests cover focus-session lifecycle.\n- [ ] Tests cover integration statuses and cached fallback.\n- [ ] Tests cover priority explanations.\n- [ ] Tests cover dashboard empty, loading, overdue, completed, and error states.\n- [ ] The suite can run reliably in local development and CI.\n\n## Implementation tasks\n\n- [ ] Add fixtures and test factories.\n- [ ] Add missing unit, integration, and route tests.\n- [ ] Add coverage reporting.\n- [ ] Configure CI test execution.\n"
+    },
+    {
+      "title": "Improve accessibility and responsive behavior",
+      "milestone": "Milestone 5: Production Readiness",
+      "labels": [
+        "accessibility",
+        "frontend"
+      ],
+      "body": "## User story\n\nAs a student, I can use PlanGuard on mobile and with keyboard navigation so that it works in my normal study environment.\n\n## Acceptance criteria\n\n- [ ] Interactive elements are keyboard accessible.\n- [ ] Dialog focus is managed correctly.\n- [ ] Visible focus indicators are present.\n- [ ] Controls have screen-reader labels.\n- [ ] Text and controls meet reasonable contrast requirements.\n- [ ] Assignment rows, panels, forms, and buttons work on small screens.\n- [ ] Text does not overflow.\n- [ ] Accessibility and responsive states are manually or automatically checked.\n\n## Implementation tasks\n\n- [ ] Audit semantic HTML and keyboard behavior.\n- [ ] Add dialog focus management.\n- [ ] Improve responsive layouts.\n- [ ] Add accessibility checks.\n"
+    },
+    {
+      "title": "Handle dashboard empty, loading, and error states",
+      "milestone": "Milestone 5: Production Readiness",
+      "labels": [
+        "frontend",
+        "user-experience"
+      ],
+      "body": "## User story\n\nAs a student, I receive useful feedback in every dashboard state so that I always understand what to do next.\n\n## Acceptance criteria\n\n- [ ] First-time users receive a clear onboarding action.\n- [ ] No-assignment state offers an Add assignment action.\n- [ ] Loading is visibly represented.\n- [ ] Sync failures explain whether cached data is active.\n- [ ] Overdue and completed assignments are clearly represented.\n- [ ] A Nothing urgent state is available.\n- [ ] State behavior is tested.\n\n## Implementation tasks\n\n- [ ] Define dashboard state rules.\n- [ ] Build state-specific components or templates.\n- [ ] Add state tests.\n"
+    },
+    {
+      "title": "Clean up UI copy and encoding",
+      "milestone": "Milestone 5: Production Readiness",
+      "labels": [
+        "maintenance",
+        "frontend"
+      ],
+      "body": "## User story\n\nAs a student, I see consistent and correctly rendered text so that the interface feels reliable.\n\n## Acceptance criteria\n\n- [ ] Templates render punctuation and symbols correctly in supported browsers.\n- [ ] Mojibake or broken characters are removed.\n- [ ] Landing page, dashboard, and integration-state copy use consistent terminology.\n- [ ] Source files use a consistent encoding.\n\n## Implementation tasks\n\n- [ ] Audit templates and static content.\n- [ ] Normalize files to UTF-8.\n- [ ] Centralize or document preferred UI terminology.\n"
+    }
+  ]
+}

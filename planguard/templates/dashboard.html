@@ -17,7 +17,7 @@
       <section class="panel queue">
         <div class="panel-title"><div><span>ACTIVE PRIORITY QUEUE</span><h2>Your next moves</h2></div><span class="sync">● Synced</span></div>
         {% for item in assignments %}
-        <article class="task-row{% if loop.first %} top-recommendation{% endif %}{% if item.is_overdue %} overdue-task{% endif %}">
+        <article class="task-row{% if loop.first %} top-recommendation{% endif %}{% if item.is_overdue %} overdue-task{% endif %}" data-assignment-row data-assignment-id="{{ item.id }}">
           <div class="rank">{% if loop.first %}<span class="top-crown">★</span>{% endif %}{{ '%02d'|format(loop.index) }}</div>
           <div class="task-info">
             <div class="task-meta"><small>{{ item.course }}</small>{% if loop.first %}<span class="top-pick-badge">Top priority</span>{% endif %}<span class="due-badge {{ item.deadline_status }}">{{ item.due_label }}</span></div>
@@ -71,7 +71,7 @@
         {% if active_focus %}
         <span class="kicker">Focus session</span>
         <span class="focus-state {{ active_focus.status }}" data-focus-state>{{ active_focus.status }}</span>
-        <h3 data-focus-title>{{ active_focus.assignment_title }}</h3>
+        <h3 data-focus-title data-assignment-id="{{ active_focus.assignment_id }}" data-assignment-progress="{{ active_focus_progress or 0 }}">{{ active_focus.assignment_title }}</h3>
         <div class="timer live-timer" role="timer" aria-label="Focus time remaining" data-focus-display data-session-id="{{ active_focus.id }}" data-status="{{ active_focus.status }}" data-remaining-seconds="{{ active_focus.remaining_seconds }}">{{ '%02d:%02d'|format(active_focus.remaining_seconds // 60, active_focus.remaining_seconds % 60) }}</div>
         <p class="focus-intent">{{ active_focus.planned_minutes }}-minute focus block · persists across refreshes</p>
         <div class="focus-controls">
@@ -102,4 +102,25 @@
   </div>
 </section>
 {% include "_delete_dialog.html" %}
+{% if active_focus %}
+<dialog id="progress-dialog" data-focus-progress-dialog>
+  <form method="dialog" data-focus-progress-form>
+    <button class="dialog-close" type="button" data-focus-progress-close aria-label="Close">x</button>
+    <span class="kicker">Focus progress</span>
+    <h2>Update assignment progress</h2>
+    <p data-progress-copy>How complete is {{ active_focus.assignment_title }} now?</p>
+    <label for="focus-progress-range">Progress</label>
+    <div class="progress-control">
+      <input id="focus-progress-range" name="progress" type="range" min="0" max="100" step="10" value="{{ active_focus_progress or 0 }}" data-progress-range>
+      <input aria-label="Progress percent" type="number" min="0" max="100" step="10" value="{{ active_focus_progress or 0 }}" data-progress-number>
+      <span>%</span>
+    </div>
+    <p class="dialog-error" data-progress-error hidden></p>
+    <div class="dialog-actions">
+      <button class="button ghost" type="submit" data-skip-progress>End focus only</button>
+      <button class="button" type="submit" data-save-progress>Save progress</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
 {% endblock %}

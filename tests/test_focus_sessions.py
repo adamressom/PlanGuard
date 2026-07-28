@@ -73,7 +73,41 @@ def test_owner_can_start_pause_resume_and_end(focus_setup):
     assert client.post(f"/api/focus-sessions/{session_id}/resume").get_json()["session"]["status"] == "running"
     ended = client.post(f"/api/focus-sessions/{session_id}/end", json={"reason": "manual"})
     assert ended.get_json()["session"]["status"] == "ended"
+    assert ended.get_json()["assignments"][0]["id"] == ids["assignment"]
     assert client.get("/api/focus-sessions/active").get_json() == {"session": None}
+
+
+def test_progress_can_be_saved_during_active_focus_session(focus_setup):
+    app, ids = focus_setup
+    client = app.test_client()
+    sign_in(client, ids["owner"])
+    client.post("/api/focus-sessions", json={"assignment_id": ids["assignment"], "planned_minutes": 25})
+    response = client.patch(f'/api/assignments/{ids["assignment"]}', json={"progress": 80})
+    assert response.status_code == 200
+    assert response.get_json()["progress"] == 80
+    assert response.get_json()["assignments"][0]["progress"] == 80
+    assert client.get("/api/focus-sessions/active").get_json()["session"]["status"] == "running"
+    with app.app_context():
+        assert db.session.get(Assignment, ids["assignment"]).progress == 80
+
+
+def test_progress_api_rejects_invalid_progress_values(focus_setup):
+    app, ids = focus_setup
+    client = app.test_client()
+    sign_in(client, ids["owner"])
+    for value in ("80", -1, 101, None, True):
+        response = client.patch(f'/api/assignments/{ids["assignment"]}', json={"progress": value})
+        assert response.status_code == 400
+        assert response.get_json() == {"error": "Progress must be an integer from 0 to 100."}
+
+
+def test_progress_api_rejects_unknown_assignment(focus_setup):
+    app, ids = focus_setup
+    client = app.test_client()
+    sign_in(client, ids["owner"])
+    response = client.patch("/api/assignments/9999", json={"progress": 50})
+    assert response.status_code == 404
+    assert response.get_json() == {"error": "Record not found."}
 
 
 @pytest.mark.parametrize("minutes", [0, 241, 2.5, "25", None, True])
@@ -147,6 +181,26 @@ def test_active_focus_survives_refresh_and_has_keyboard_controls(focus_setup):
         assert b'<button class="focus-control pause" type="button" data-focus-pause' in response.data
         assert b'<button class="focus-control end" type="button" data-focus-end' in response.data
         assert b"persists across refreshes" in response.data
+
+
+def test_dashboard_exposes_focus_progress_dialog_workflow(focus_setup):
+    app, ids = focus_setup
+    client = app.test_client()
+    sign_in(client, ids["owner"])
+    client.post("/api/focus-sessions", json={"assignment_id": ids["assignment"], "planned_minutes": 25})
+    response = client.get("/dashboard")
+    assert b"data-focus-progress-dialog" in response.data
+    assert b"data-focus-progress-form" in response.data
+    assert b"data-progress-copy" in response.data
+    assert b"data-progress-range" in response.data
+    assert b"data-progress-number" in response.data
+    assert b"data-save-progress" in response.data
+    assert b"data-skip-progress" in response.data
+    assert b"End focus only" in response.data
+    assert b"Save progress" in response.data
+    assert b'step="10"' in response.data
+    assert f'data-assignment-id="{ids["assignment"]}"'.encode() in response.data
+    assert b'data-assignment-progress="10"' in response.data
 
 
 def test_paused_focus_shows_resume(focus_setup):
