@@ -1,12 +1,15 @@
+from datetime import datetime, timedelta
+
 from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
 
 from . import db
 from .auth import api_login_required, login_required
-from .models import Assignment, FocusSession, IntegrationState
+from .models import Assignment, AvailabilityOverride, FocusSession, IntegrationState, ScheduledFocusBlock, WeeklyAvailability
 from .services.assignments import create_assignment, remove_assignment, set_assignment_status, update_assignment as save_assignment_updates
 from .services.focus import FocusStateError, active_focus_for_user, end_focus_session, focus_payload, pause_focus_session, recent_focus_history, resume_focus_session, start_focus_session
 from .services.ownership import get_owned_record, owned_records
 from .services.priority import assignment_priority_input, rank_assignments
+from .services.scheduling import parse_date, parse_time, recommendation_for_assignment, validate_scheduled_block
 
 main = Blueprint("main", __name__)
 
@@ -86,6 +89,12 @@ def dashboard():
         active_focus_assignment = get_owned_record(Assignment, active_focus.assignment_id)
         active_focus_progress = active_focus_assignment.progress if active_focus_assignment else 0
     focus_history = recent_focus_history(g.user.id)
+    upcoming_blocks = db.session.scalars(
+        owned_records(ScheduledFocusBlock)
+        .where(ScheduledFocusBlock.status == "scheduled")
+        .order_by(ScheduledFocusBlock.starts_at)
+        .limit(3)
+    ).all()
     recommended = active_assignments[0] if active_assignments else None
     recommended_focus_minutes = 0
     if recommended and g.user.available_study_minutes > 0:
@@ -104,6 +113,7 @@ def dashboard():
         active_focus_progress=active_focus_progress,
         recommended_focus_minutes=recommended_focus_minutes,
         focus_history=[focus_payload(item) for item in focus_history],
+        upcoming_blocks=upcoming_blocks,
     )
 
 
@@ -123,6 +133,92 @@ def update_availability():
         db.session.commit()
         flash(f"Your daily study window is now {minutes} minutes.", "success")
     return redirect(url_for("main.dashboard"))
+
+
+@main.get("/availability")
+@login_required
+def availability_page():
+    weekly_windows = db.session.scalars(
+        owned_records(WeeklyAvailability).order_by(WeeklyAvailability.weekday, WeeklyAvailability.starts_at_time)
+    ).all()
+    overrides = db.session.scalars(
+        owned_records(AvailabilityOverride).order_by(AvailabilityOverride.date, AvailabilityOverride.starts_at_time)
+    ).all()
+    return render_template("availability_page.html", weekly_windows=weekly_windows, overrides=overrides, weekdays=[
+        (0, "Monday"),
+        (1, "Tuesday"),
+        (2, "Wednesday"),
+        (3, "Thursday"),
+        (4, "Friday"),
+        (5, "Saturday"),
+        (6, "Sunday"),
+    ])
+
+
+def _time_window_errors(starts_at_time, ends_at_time):
+    if ends_at_time <= starts_at_time:
+        return "End time must be after start time."
+    return None
+
+
+@main.post("/availability/weekly")
+@login_required
+def add_weekly_availability():
+    try:
+        weekday = int(request.form.get("weekday", ""))
+        starts_at_time = parse_time(request.form.get("starts_at_time", ""))
+        ends_at_time = parse_time(request.form.get("ends_at_time", ""))
+    except (TypeError, ValueError):
+        flash("Enter a valid weekday, start time, and end time.", "error")
+        return redirect(url_for("main.availability_page"))
+    if weekday not in range(7):
+        flash("Choose a valid weekday.", "error")
+        return redirect(url_for("main.availability_page"))
+    error = _time_window_errors(starts_at_time, ends_at_time)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("main.availability_page"))
+    db.session.add(WeeklyAvailability(
+        user_id=g.user.id,
+        weekday=weekday,
+        starts_at_time=starts_at_time,
+        ends_at_time=ends_at_time,
+        label=request.form.get("label", "").strip()[:120],
+    ))
+    db.session.commit()
+    flash("Weekly study window added.", "success")
+    return redirect(url_for("main.availability_page"))
+
+
+@main.post("/availability/overrides")
+@login_required
+def add_availability_override():
+    try:
+        override_date = parse_date(request.form.get("date", ""))
+        starts_at_time = parse_time(request.form.get("starts_at_time", ""))
+        ends_at_time = parse_time(request.form.get("ends_at_time", ""))
+    except (TypeError, ValueError):
+        flash("Enter a valid date, start time, and end time.", "error")
+        return redirect(url_for("main.availability_page"))
+    mode = request.form.get("mode")
+    if mode not in {"available", "unavailable"}:
+        flash("Choose whether this adds availability or blocks time.", "error")
+        return redirect(url_for("main.availability_page"))
+    error = _time_window_errors(starts_at_time, ends_at_time)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("main.availability_page"))
+    db.session.add(AvailabilityOverride(
+        user_id=g.user.id,
+        date=override_date,
+        starts_at_time=starts_at_time,
+        ends_at_time=ends_at_time,
+        mode=mode,
+        label=request.form.get("label", "").strip()[:120],
+    ))
+    db.session.commit()
+    flash("Schedule exception saved.", "success")
+    return redirect(url_for("main.availability_page"))
 
 
 @main.get("/api/focus-sessions/active")
@@ -221,7 +317,9 @@ def new_assignment():
         assignment, errors = create_assignment(g.user.id, request.form)
         if assignment:
             flash(f'"{assignment.title}" was added to your plan.', "success")
-            return redirect(url_for("main.dashboard"))
+            if assignment.completed:
+                return redirect(url_for("main.dashboard"))
+            return redirect(url_for("main.schedule_assignment", assignment_id=assignment.id))
     status = 400 if errors else 200
     return render_template("assignment_form.html", errors=errors, form_data=form_data, mode="create"), status
 
@@ -310,6 +408,216 @@ def assignment_detail(assignment_id):
     if assignment is None:
         abort(404)
     return render_template("assignment_detail.html", assignment=assignment)
+
+
+@main.route("/assignments/<int:assignment_id>/schedule", methods=("GET", "POST"))
+@login_required
+def schedule_assignment(assignment_id):
+    assignment = get_owned_record(Assignment, assignment_id)
+    if assignment is None:
+        abort(404)
+    dismissed = db.session.scalar(
+        owned_records(ScheduledFocusBlock)
+        .where(
+            ScheduledFocusBlock.assignment_id == assignment.id,
+            ScheduledFocusBlock.status == "dismissed",
+        )
+        .order_by(ScheduledFocusBlock.id.desc())
+    )
+    if request.method == "POST":
+        action = request.form.get("action", "")
+        if action == "dismiss":
+            if dismissed is None:
+                db.session.add(ScheduledFocusBlock(
+                    user_id=g.user.id,
+                    assignment_id=assignment.id,
+                    status="dismissed",
+                    source="dismissed",
+                    note="User dismissed scheduling suggestions.",
+                ))
+                db.session.commit()
+            flash("Scheduling suggestions dismissed for this assignment.", "success")
+            return redirect(url_for("main.dashboard"))
+
+        if action in {"accept", "adjust"}:
+            try:
+                starts_at = request.form.get("starts_at", "").strip()
+                if "T" in starts_at:
+                    starts_at = starts_at + ":00" if starts_at.count(":") == 1 else starts_at
+                starts_at = datetime.fromisoformat(starts_at)
+                planned_minutes = int(request.form.get("planned_minutes", ""))
+            except (TypeError, ValueError):
+                flash("Choose a valid start time and duration.", "error")
+                return redirect(url_for("main.schedule_assignment", assignment_id=assignment.id))
+            confirm_transition = request.form.get("confirm_transition") == "1"
+            block_range, errors, warnings, focus_conflicts = validate_scheduled_block(
+                assignment,
+                g.user,
+                starts_at,
+                planned_minutes,
+                confirm_transition=confirm_transition,
+            )
+            if focus_conflicts:
+                non_conflict_errors = [
+                    error for error in errors
+                    if not error.startswith("This overlaps an existing study block.")
+                ]
+                resolution = request.form.get("conflict_resolution", "")
+                if resolution == "keep_current_plan":
+                    flash("Your current schedule was kept unchanged.", "success")
+                    return redirect(url_for("main.dashboard"))
+                if resolution and non_conflict_errors:
+                    for error in non_conflict_errors:
+                        flash(error, "error")
+                    return redirect(url_for("main.schedule_assignment", assignment_id=assignment.id))
+                if resolution == "replace_existing":
+                    for conflict in focus_conflicts:
+                        block = db.session.get(ScheduledFocusBlock, conflict.focus_block_id)
+                        if block and block.user_id == g.user.id:
+                            block.status = "cancelled"
+                    db.session.add(ScheduledFocusBlock(
+                        user_id=g.user.id,
+                        assignment_id=assignment.id,
+                        starts_at=block_range[0],
+                        ends_at=block_range[1],
+                        planned_minutes=planned_minutes,
+                        status="scheduled",
+                        source="replacement",
+                    ))
+                    db.session.commit()
+                    flash("Existing study block replaced.", "success")
+                    return redirect(url_for("main.dashboard"))
+                if resolution == "combine":
+                    combined_start = min([block_range[0], *[conflict.starts_at for conflict in focus_conflicts]])
+                    combined_end = max([block_range[1], *[conflict.ends_at for conflict in focus_conflicts]])
+                    combined_minutes = min(int((combined_end - combined_start).total_seconds() // 60), 240)
+                    for conflict in focus_conflicts:
+                        block = db.session.get(ScheduledFocusBlock, conflict.focus_block_id)
+                        if block and block.user_id == g.user.id:
+                            block.status = "cancelled"
+                    db.session.add(ScheduledFocusBlock(
+                        user_id=g.user.id,
+                        assignment_id=assignment.id,
+                        starts_at=combined_start,
+                        ends_at=combined_start + timedelta(minutes=combined_minutes),
+                        planned_minutes=combined_minutes,
+                        status="scheduled",
+                        source="combined",
+                        note="Combined with an overlapping study block.",
+                    ))
+                    db.session.commit()
+                    flash("Study blocks combined.", "success")
+                    return redirect(url_for("main.dashboard"))
+                if resolution == "reschedule_existing":
+                    old_blocks = []
+                    for conflict in focus_conflicts:
+                        block = db.session.get(ScheduledFocusBlock, conflict.focus_block_id)
+                        if block and block.user_id == g.user.id:
+                            block.status = "rescheduled"
+                            old_blocks.append(block)
+                    db.session.add(ScheduledFocusBlock(
+                        user_id=g.user.id,
+                        assignment_id=assignment.id,
+                        starts_at=block_range[0],
+                        ends_at=block_range[1],
+                        planned_minutes=planned_minutes,
+                        status="scheduled",
+                        source="replacement",
+                    ))
+                    db.session.flush()
+                    for block in old_blocks:
+                        old_assignment = db.session.get(Assignment, block.assignment_id)
+                        if old_assignment:
+                            old_recommendation = recommendation_for_assignment(old_assignment, g.user, start_day=block_range[1].date(), days=7)
+                            if old_recommendation.suggestions:
+                                suggestion = old_recommendation.suggestions[0]
+                                db.session.add(ScheduledFocusBlock(
+                                    user_id=g.user.id,
+                                    assignment_id=old_assignment.id,
+                                    starts_at=suggestion.starts_at,
+                                    ends_at=suggestion.ends_at,
+                                    planned_minutes=suggestion.planned_minutes,
+                                    status="scheduled",
+                                    source="rescheduled",
+                                    note="Moved to make room for a higher-priority block.",
+                                ))
+                    db.session.commit()
+                    flash("Existing study block rescheduled where space was available.", "success")
+                    return redirect(url_for("main.dashboard"))
+                return render_template(
+                    "schedule_assignment.html",
+                    assignment=assignment,
+                    recommendation=recommendation_for_assignment(assignment, g.user),
+                    dismissed=dismissed,
+                    errors=errors,
+                    warnings=warnings,
+                    focus_conflicts=focus_conflicts,
+                    proposed_start=starts_at,
+                    proposed_minutes=planned_minutes,
+                ), 409
+            if errors:
+                for error in errors:
+                    flash(error, "error")
+                return redirect(url_for("main.schedule_assignment", assignment_id=assignment.id))
+            if warnings:
+                return render_template(
+                    "schedule_assignment.html",
+                    assignment=assignment,
+                    recommendation=recommendation_for_assignment(assignment, g.user),
+                    dismissed=dismissed,
+                    errors=[],
+                    warnings=warnings,
+                    focus_conflicts=[],
+                    proposed_start=starts_at,
+                    proposed_minutes=planned_minutes,
+                ), 409
+            db.session.add(ScheduledFocusBlock(
+                user_id=g.user.id,
+                assignment_id=assignment.id,
+                starts_at=block_range[0],
+                ends_at=block_range[1],
+                planned_minutes=planned_minutes,
+                status="scheduled",
+                source="adjusted" if action == "adjust" else "recommended",
+            ))
+            db.session.commit()
+            flash("Focus block scheduled.", "success")
+            return redirect(url_for("main.dashboard"))
+
+        flash("Choose a scheduling action.", "error")
+        return redirect(url_for("main.schedule_assignment", assignment_id=assignment.id))
+
+    return render_template(
+        "schedule_assignment.html",
+        assignment=assignment,
+        recommendation=recommendation_for_assignment(assignment, g.user),
+        dismissed=dismissed,
+        errors=[],
+        warnings=[],
+        focus_conflicts=[],
+        proposed_start=None,
+        proposed_minutes=None,
+    )
+
+
+@main.post("/scheduled-focus-blocks/<int:block_id>/start")
+@login_required
+def start_scheduled_focus_block(block_id):
+    block = get_owned_record(ScheduledFocusBlock, block_id)
+    if block is None or block.status != "scheduled":
+        abort(404)
+    assignment = get_owned_record(Assignment, block.assignment_id)
+    if assignment is None:
+        abort(404)
+    try:
+        start_focus_session(g.user.id, assignment, block.planned_minutes)
+    except FocusStateError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("main.dashboard"))
+    block.status = "completed"
+    db.session.commit()
+    flash(f'Focus block for "{assignment.title}" started.', "success")
+    return redirect(url_for("main.dashboard"))
 
 
 @main.get("/api/assignments/<int:assignment_id>")

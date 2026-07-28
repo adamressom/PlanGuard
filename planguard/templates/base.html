@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/explanations.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/focus-timer.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/focus-history.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/scheduling.css') }}">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
@@ -35,6 +36,7 @@
         <div class="account-popover">
           <div class="account-identity"><span class="avatar avatar-small">{{ g.user.initials }}</span><div><b>{{ g.user.display_name }}</b><small>{{ g.user.email }}</small></div></div>
           <a href="/dashboard">Dashboard</a>
+          <a href="{{ url_for('main.availability_page') }}">Availability</a>
           <form method="post" action="{{ url_for('auth.logout') }}"><button type="submit">Log out</button></form>
         </div>
       </details>

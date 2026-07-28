@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Availability - PlanGuard{% endblock %}
+{% block content %}
+<section class="dashboard shell schedule-page">
+  <div class="dash-heading">
+    <div><span class="kicker">Study schedule</span><h1>Tell PlanGuard when you can study.</h1></div>
+    <a class="button small" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+  </div>
+  <div class="schedule-grid">
+    <section class="panel">
+      <div class="panel-title"><div><span>WEEKLY</span><h2>Recurring availability</h2></div></div>
+      <form class="schedule-form" method="post" action="{{ url_for('main.add_weekly_availability') }}">
+        <label>Day<select name="weekday" required>{% for value, label in weekdays %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+        <label>Start<input name="starts_at_time" type="time" required></label>
+        <label>End<input name="ends_at_time" type="time" required></label>
+        <label>Label<input name="label" maxlength="120" placeholder="Evening study"></label>
+        <button class="button" type="submit">Add window</button>
+      </form>
+      <div class="schedule-list">
+        {% for window in weekly_windows %}
+        <article class="schedule-row"><b>{{ weekdays[window.weekday][1] }}</b><span>{{ window.starts_at_time.strftime('%I:%M %p') }} - {{ window.ends_at_time.strftime('%I:%M %p') }}</span><small>{{ window.label or 'Study time' }}</small></article>
+        {% endfor %}
+        {% if not weekly_windows %}<p class="schedule-empty">No weekly study windows yet.</p>{% endif %}
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-title"><div><span>EXCEPTIONS</span><h2>Specific-day changes</h2></div></div>
+      <form class="schedule-form" method="post" action="{{ url_for('main.add_availability_override') }}">
+        <label>Date<input name="date" type="date" required></label>
+        <label>Start<input name="starts_at_time" type="time" required></label>
+        <label>End<input name="ends_at_time" type="time" required></label>
+        <label>Mode<select name="mode" required><option value="available">Add availability</option><option value="unavailable">Block time</option></select></label>
+        <label>Label<input name="label" maxlength="120" placeholder="Class, work, extra study"></label>
+        <button class="button" type="submit">Save exception</button>
+      </form>
+      <div class="schedule-list">
+        {% for item in overrides %}
+        <article class="schedule-row"><b>{{ item.date.isoformat() }}</b><span>{{ item.starts_at_time.strftime('%I:%M %p') }} - {{ item.ends_at_time.strftime('%I:%M %p') }}</span><small>{{ item.mode }}{% if item.label %}: {{ item.label }}{% endif %}</small></article>
+        {% endfor %}
+        {% if not overrides %}<p class="schedule-empty">No one-day schedule changes yet.</p>{% endif %}
+      </div>
+    </section>
+  </div>
+</section>
+{% endblock %}
