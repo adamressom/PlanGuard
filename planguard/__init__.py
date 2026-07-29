@@ -27,6 +27,19 @@ def apply_schema_updates():
         focus_columns = {column["name"] for column in inspector.get_columns("focus_session")}
         if "completed_seconds" not in focus_columns:
             statements.append("ALTER TABLE focus_session ADD COLUMN completed_seconds INTEGER")
+    if "integration_state" in table_names:
+        integration_columns = {column["name"] for column in inspector.get_columns("integration_state")}
+        additions = {
+            "mode": "VARCHAR(20)",
+            "provider_account_id": "VARCHAR(255)",
+            "provider_account_email": "VARCHAR(255)",
+            "granted_scopes": "JSON",
+            "last_error_code": "VARCHAR(80)",
+            "connected_at": "DATETIME",
+        }
+        for column, definition in additions.items():
+            if column not in integration_columns:
+                statements.append(f"ALTER TABLE integration_state ADD COLUMN {column} {definition}")
 
     if statements:
         with db.engine.begin() as connection:
@@ -54,9 +67,32 @@ def create_app(test_config=None):
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=environment == "production",
         PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
+        GOOGLE_CALENDAR_MODE=os.getenv("GOOGLE_CALENDAR_MODE", "demo").strip().lower(),
+        GOOGLE_CLIENT_ID=os.getenv("GOOGLE_CLIENT_ID", ""),
+        GOOGLE_CLIENT_SECRET=os.getenv("GOOGLE_CLIENT_SECRET", ""),
+        GOOGLE_OAUTH_REDIRECT_URI=os.getenv("GOOGLE_OAUTH_REDIRECT_URI", ""),
+        TOKEN_ENCRYPTION_KEY=os.getenv("TOKEN_ENCRYPTION_KEY", ""),
+        TOKEN_ENCRYPTION_KEY_VERSION=os.getenv("TOKEN_ENCRYPTION_KEY_VERSION", "v1"),
+        DEFAULT_TIMEZONE=os.getenv("DEFAULT_TIMEZONE", "America/New_York"),
     )
     if test_config:
         app.config.update(test_config)
+
+    mode = app.config["GOOGLE_CALENDAR_MODE"]
+    if mode not in {"disabled", "demo", "live"}:
+        raise RuntimeError("GOOGLE_CALENDAR_MODE must be disabled, demo, or live")
+    required_live_settings = (
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_OAUTH_REDIRECT_URI",
+        "TOKEN_ENCRYPTION_KEY",
+    )
+    missing_live_settings = [key for key in required_live_settings if not app.config.get(key)]
+    app.config["GOOGLE_OAUTH_CONFIGURED"] = mode != "live" or not missing_live_settings
+    if mode == "live" and environment == "production" and missing_live_settings:
+        raise RuntimeError(
+            "Live Google Calendar requires: " + ", ".join(missing_live_settings)
+        )
 
     db.init_app(app)
 
