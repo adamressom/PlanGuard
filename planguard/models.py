@@ -88,12 +88,51 @@ class ScheduledFocusBlock(db.Model):
 
 class IntegrationState(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     provider = db.Column(db.String(40), nullable=False)
+    mode = db.Column(db.String(20))
     status = db.Column(db.String(30), nullable=False, default="disconnected")
+    provider_account_id = db.Column(db.String(255))
+    provider_account_email = db.Column(db.String(255))
+    granted_scopes = db.Column(db.JSON)
+    last_error_code = db.Column(db.String(80))
+    connected_at = db.Column(db.DateTime)
     last_synced_at = db.Column(db.DateTime)
     retry_count = db.Column(db.Integer, nullable=False, default=0)
     cached_payload = db.Column(db.JSON)
+    credential = db.relationship(
+        "OAuthCredential",
+        backref="integration",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "provider", name="uq_integration_user_provider"),
+    )
+
+
+class OAuthCredential(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    integration_id = db.Column(
+        db.Integer,
+        db.ForeignKey("integration_state.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    encrypted_access_token = db.Column(db.Text)
+    encrypted_refresh_token = db.Column(db.Text)
+    access_token_expires_at = db.Column(db.DateTime)
+    token_type = db.Column(db.String(30), nullable=False, default="Bearer")
+    encryption_key_version = db.Column(db.String(30), nullable=False, default="v1")
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
 
 class FocusSession(db.Model):

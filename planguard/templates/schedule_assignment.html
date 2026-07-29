@@ -13,6 +13,9 @@
     <a class="button ghost" href="{{ url_for('main.dashboard') }}">Return to dashboard</a>
   </section>
   {% else %}
+  {% if calendar_status and calendar_status.connected %}
+  <div class="schedule-callout" role="status"><b>{{ 'Demo calendar' if calendar_status.mode == 'demo' else 'Calendar-aware' }}</b> Suggestions avoid {{ calendar_status.busy_count }} {{ 'simulated ' if calendar_status.mode == 'demo' else '' }}busy periods.</div>
+  {% endif %}
   <div class="schedule-grid">
     <section class="panel">
       <div class="panel-title"><div><span>RECOMMENDED</span><h2>Suggested blocks</h2></div><span>{{ recommendation.scheduled_minutes }} of {{ recommendation.requested_minutes }} min</span></div>

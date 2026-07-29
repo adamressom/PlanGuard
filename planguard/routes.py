@@ -1,10 +1,24 @@
-from datetime import datetime, timedelta
+import hmac
+import secrets
+from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from . import db
 from .auth import api_login_required, login_required
 from .models import Assignment, AvailabilityOverride, FocusSession, IntegrationState, ScheduledFocusBlock, WeeklyAvailability
+from .services.calendar import (
+    CalendarProviderError,
+    GOOGLE_PROVIDER,
+    GOOGLE_SCOPES,
+    cache_busy_periods,
+    calendar_conflicts_for_user,
+    calendar_status_for_user,
+    demo_busy_periods,
+    google_integration_for_user,
+    oauth_client,
+    store_token_response,
+)
 from .services.assignments import create_assignment, remove_assignment, set_assignment_status, update_assignment as save_assignment_updates
 from .services.focus import FocusStateError, active_focus_for_user, end_focus_session, focus_payload, pause_focus_session, recent_focus_history, resume_focus_session, start_focus_session
 from .services.ownership import get_owned_record, owned_records
@@ -34,10 +48,22 @@ def integration_payload(integration):
     return {
         "id": integration.id,
         "provider": integration.provider,
+        "mode": integration.mode,
         "status": integration.status,
         "last_synced_at": integration.last_synced_at.isoformat() if integration.last_synced_at else None,
         "retry_count": integration.retry_count,
     }
+
+
+def calendar_recommendation(assignment, start_day=None, days=7):
+    conflicts = calendar_conflicts_for_user(g.user.id, start_day, days)
+    return recommendation_for_assignment(
+        assignment,
+        g.user,
+        start_day=start_day,
+        days=days,
+        calendar_conflicts=conflicts,
+    )
 
 
 def api_not_found():
@@ -114,6 +140,7 @@ def dashboard():
         recommended_focus_minutes=recommended_focus_minutes,
         focus_history=[focus_payload(item) for item in focus_history],
         upcoming_blocks=upcoming_blocks,
+        calendar_status=calendar_status_for_user(g.user.id),
     )
 
 
@@ -144,7 +171,9 @@ def availability_page():
     overrides = db.session.scalars(
         owned_records(AvailabilityOverride).order_by(AvailabilityOverride.date, AvailabilityOverride.starts_at_time)
     ).all()
-    return render_template("availability_page.html", weekly_windows=weekly_windows, overrides=overrides, weekdays=[
+    calendar_status = calendar_status_for_user(g.user.id)
+    calendar_conflicts = calendar_conflicts_for_user(g.user.id)
+    return render_template("availability_page.html", weekly_windows=weekly_windows, overrides=overrides, calendar_status=calendar_status, calendar_conflicts=calendar_conflicts, weekdays=[
         (0, "Monday"),
         (1, "Tuesday"),
         (2, "Wednesday"),
@@ -153,6 +182,189 @@ def availability_page():
         (5, "Saturday"),
         (6, "Sunday"),
     ])
+
+
+def _begin_google_oauth_attempt():
+    state = secrets.token_urlsafe(32)
+    session["google_oauth_attempt"] = {
+        "state": state,
+        "user_id": g.user.id,
+        "provider": GOOGLE_PROVIDER,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return state
+
+
+def _consume_google_oauth_attempt(returned_state):
+    attempt = session.pop("google_oauth_attempt", None)
+    if not attempt or not returned_state:
+        return False
+    try:
+        created_at = datetime.fromisoformat(attempt["created_at"])
+        valid = (
+            attempt["user_id"] == g.user.id
+            and attempt["provider"] == GOOGLE_PROVIDER
+            and datetime.now(timezone.utc) - created_at <= timedelta(minutes=10)
+            and hmac.compare_digest(attempt["state"], returned_state)
+        )
+    except (KeyError, TypeError, ValueError):
+        return False
+    return valid
+
+
+@main.post("/integrations/google-calendar/connect")
+@login_required
+def connect_google_calendar():
+    mode = current_app.config["GOOGLE_CALENDAR_MODE"]
+    if mode == "disabled":
+        flash("Google Calendar integration is unavailable.", "error")
+        return redirect(url_for("main.dashboard"))
+    if mode == "live" and not current_app.config["GOOGLE_OAUTH_CONFIGURED"]:
+        flash("Google Calendar live connection is not configured.", "error")
+        return redirect(url_for("main.dashboard"))
+    integration = google_integration_for_user(g.user.id, create=True)
+    if integration.status == "connected" and request.form.get("reconnect") != "1":
+        flash("Disconnect or choose reconnect before replacing this calendar connection.", "error")
+        return redirect(url_for("main.dashboard"))
+    state = _begin_google_oauth_attempt()
+    integration.status = "connecting"
+    integration.mode = mode
+    integration.last_error_code = None
+    db.session.commit()
+    if mode == "demo":
+        return redirect(url_for("main.google_calendar_demo_consent"))
+    return redirect(oauth_client().build_authorization_url(
+        state,
+        force_consent=request.form.get("reconnect") == "1" or integration.credential is None,
+    ))
+
+
+@main.get("/integrations/google-calendar/demo-consent")
+@login_required
+def google_calendar_demo_consent():
+    attempt = session.get("google_oauth_attempt")
+    if not attempt or attempt.get("user_id") != g.user.id:
+        flash("That demo connection attempt expired. Please try again.", "error")
+        return redirect(url_for("main.dashboard"))
+    return render_template("google_calendar_demo_consent.html", state=attempt["state"])
+
+
+@main.post("/integrations/google-calendar/demo-callback")
+@login_required
+def google_calendar_demo_callback():
+    integration = google_integration_for_user(g.user.id, create=True)
+    if not _consume_google_oauth_attempt(request.form.get("state")):
+        integration.status = "disconnected"
+        integration.last_error_code = "oauth_state_invalid"
+        db.session.commit()
+        return render_template("google_calendar_oauth_error.html"), 400
+    if request.form.get("decision") != "approve":
+        integration.status = "disconnected"
+        integration.mode = None
+        db.session.commit()
+        flash("Demo calendar was not connected.", "success")
+        return redirect(url_for("main.dashboard"))
+    integration.mode = "demo"
+    integration.status = "connected"
+    integration.connected_at = datetime.now(timezone.utc)
+    cache_busy_periods(integration, demo_busy_periods(datetime.now(timezone.utc).date(), 14))
+    db.session.commit()
+    flash("Demo calendar connected. No Google account data was accessed.", "success")
+    return redirect(url_for("main.dashboard"))
+
+
+@main.get("/integrations/google-calendar/callback")
+@login_required
+def google_calendar_callback():
+    integration = google_integration_for_user(g.user.id, create=True)
+    if not _consume_google_oauth_attempt(request.args.get("state")):
+        if integration.status != "connected":
+            integration.status = "disconnected"
+        integration.last_error_code = "oauth_state_invalid"
+        db.session.commit()
+        return render_template("google_calendar_oauth_error.html"), 400
+    if request.args.get("error"):
+        integration.status = "disconnected"
+        integration.last_error_code = "access_denied" if request.args["error"] == "access_denied" else "provider_error"
+        db.session.commit()
+        flash("Google Calendar was not connected.", "success" if request.args["error"] == "access_denied" else "error")
+        return redirect(url_for("main.dashboard"))
+    code = request.args.get("code")
+    if not code:
+        integration.status = "error"
+        integration.last_error_code = "authorization_code_missing"
+        db.session.commit()
+        return render_template("google_calendar_oauth_error.html"), 400
+    try:
+        payload = oauth_client().exchange_code(code)
+        store_token_response(integration, payload)
+        integration.mode = "live"
+        integration.status = "connected"
+        integration.connected_at = datetime.now(timezone.utc)
+        integration.last_error_code = None
+        db.session.commit()
+    except CalendarProviderError as exc:
+        db.session.rollback()
+        integration = google_integration_for_user(g.user.id, create=True)
+        integration.status = "error"
+        integration.last_error_code = exc.code
+        db.session.commit()
+        flash("Google couldn’t complete the connection. Please try again.", "error")
+        return redirect(url_for("main.dashboard"))
+    flash("Google Calendar connected.", "success")
+    return redirect(url_for("main.dashboard"))
+
+
+@main.post("/integrations/google-calendar/sync")
+@login_required
+def sync_google_calendar():
+    integration = google_integration_for_user(g.user.id)
+    if integration is None or integration.status != "connected":
+        flash("Connect a calendar before syncing.", "error")
+        return redirect(url_for("main.dashboard"))
+    if integration.mode == "demo":
+        cache_busy_periods(integration, demo_busy_periods(datetime.now(timezone.utc).date(), 14))
+        db.session.commit()
+        flash("Demo calendar availability updated.", "success")
+    else:
+        flash("Live calendar event retrieval is not enabled in this demo build.", "error")
+    return redirect(url_for("main.dashboard"))
+
+
+@main.post("/integrations/google-calendar/disconnect")
+@login_required
+def disconnect_google_calendar():
+    session.pop("google_oauth_attempt", None)
+    integration = google_integration_for_user(g.user.id)
+    revocation_failed = False
+    if integration is not None:
+        if integration.mode == "live" and integration.credential:
+            try:
+                from .services.calendar import decrypt_token
+                encrypted = (
+                    integration.credential.encrypted_refresh_token
+                    or integration.credential.encrypted_access_token
+                )
+                if encrypted:
+                    oauth_client().revoke_token(decrypt_token(encrypted))
+            except CalendarProviderError:
+                revocation_failed = True
+            db.session.delete(integration.credential)
+        integration.mode = None
+        integration.status = "disconnected"
+        integration.provider_account_id = None
+        integration.provider_account_email = None
+        integration.granted_scopes = None
+        integration.cached_payload = None
+        integration.last_synced_at = None
+        integration.last_error_code = None
+        integration.retry_count = 0
+        db.session.commit()
+    if revocation_failed:
+        flash("Calendar disconnected locally, but Google could not be reached to confirm revocation.", "success")
+    else:
+        flash("Calendar disconnected.", "success")
+    return redirect(url_for("main.dashboard"))
 
 
 def _time_window_errors(starts_at_time, ends_at_time):
@@ -456,6 +668,7 @@ def schedule_assignment(assignment_id):
                 starts_at,
                 planned_minutes,
                 confirm_transition=confirm_transition,
+                calendar_conflicts=calendar_conflicts_for_user(g.user.id, starts_at.date(), 1),
             )
             if focus_conflicts:
                 non_conflict_errors = [
@@ -528,7 +741,7 @@ def schedule_assignment(assignment_id):
                     for block in old_blocks:
                         old_assignment = db.session.get(Assignment, block.assignment_id)
                         if old_assignment:
-                            old_recommendation = recommendation_for_assignment(old_assignment, g.user, start_day=block_range[1].date(), days=7)
+                            old_recommendation = calendar_recommendation(old_assignment, start_day=block_range[1].date(), days=7)
                             if old_recommendation.suggestions:
                                 suggestion = old_recommendation.suggestions[0]
                                 db.session.add(ScheduledFocusBlock(
@@ -547,7 +760,8 @@ def schedule_assignment(assignment_id):
                 return render_template(
                     "schedule_assignment.html",
                     assignment=assignment,
-                    recommendation=recommendation_for_assignment(assignment, g.user),
+                    recommendation=calendar_recommendation(assignment),
+                    calendar_status=calendar_status_for_user(g.user.id),
                     dismissed=dismissed,
                     errors=errors,
                     warnings=warnings,
@@ -563,7 +777,8 @@ def schedule_assignment(assignment_id):
                 return render_template(
                     "schedule_assignment.html",
                     assignment=assignment,
-                    recommendation=recommendation_for_assignment(assignment, g.user),
+                    recommendation=calendar_recommendation(assignment),
+                    calendar_status=calendar_status_for_user(g.user.id),
                     dismissed=dismissed,
                     errors=[],
                     warnings=warnings,
@@ -590,7 +805,8 @@ def schedule_assignment(assignment_id):
     return render_template(
         "schedule_assignment.html",
         assignment=assignment,
-        recommendation=recommendation_for_assignment(assignment, g.user),
+        recommendation=calendar_recommendation(assignment),
+        calendar_status=calendar_status_for_user(g.user.id),
         dismissed=dismissed,
         errors=[],
         warnings=[],

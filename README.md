@@ -36,3 +36,7 @@ py -m venv .venv
 .venv\Scripts\Activate.ps1
 py -m pip install -r requirements.txt
 py run.py
+```
+
+See [Google Calendar integration](docs/google-calendar.md) for the demo and
+future live OAuth configuration.

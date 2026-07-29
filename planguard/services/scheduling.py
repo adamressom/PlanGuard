@@ -252,7 +252,14 @@ def window_contains(windows, starts_at, ends_at):
     return any(window.starts_at <= starts_at and window.ends_at >= ends_at for window in windows)
 
 
-def validate_scheduled_block(assignment, user, starts_at, planned_minutes, confirm_transition=False):
+def validate_scheduled_block(
+    assignment,
+    user,
+    starts_at,
+    planned_minutes,
+    confirm_transition=False,
+    calendar_conflicts=None,
+):
     errors = []
     warnings = []
     if isinstance(planned_minutes, bool) or not isinstance(planned_minutes, int) or not 1 <= planned_minutes <= 240:
@@ -263,6 +270,11 @@ def validate_scheduled_block(assignment, user, starts_at, planned_minutes, confi
     windows = availability_windows_for_user(user.id, starts_at.date(), 1)
     if not window_contains(windows, starts_at, ends_at):
         errors.append("Choose a time inside your availability that does not overlap class, work, or unavailable time.")
+    if any(
+        ranges_overlap(starts_at, ends_at, conflict.starts_at, conflict.ends_at)
+        for conflict in (calendar_conflicts or [])
+    ):
+        errors.append("This time overlaps a busy period on your connected calendar.")
 
     focus_conflicts = [
         conflict for conflict in scheduled_block_conflicts(user.id, exclude_assignment_id=assignment.id)

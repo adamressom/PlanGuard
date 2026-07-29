@@ -41,5 +41,19 @@
       </div>
     </section>
   </div>
+  {% if calendar_status.connected %}
+  <section class="panel calendar-conflicts">
+    <div class="panel-title"><div><span>READ ONLY</span><h2>{{ 'Demo calendar' if calendar_status.mode == 'demo' else 'Google Calendar' }} conflicts</h2></div><span>{{ calendar_conflicts|length }} busy periods</span></div>
+    <p>These times are supplied by your connected calendar and cannot be edited here.</p>
+    <details>
+      <summary>View busy periods</summary>
+      <div class="schedule-list">
+        {% for conflict in calendar_conflicts %}
+        <article class="schedule-row"><b>Busy</b><span>{{ conflict.starts_at.strftime('%Y-%m-%d %I:%M %p') }} - {{ conflict.ends_at.strftime('%I:%M %p') }}</span></article>
+        {% endfor %}
+      </div>
+    </details>
+  </section>
+  {% endif %}
 </section>
 {% endblock %}

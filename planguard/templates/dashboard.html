@@ -108,7 +108,27 @@
         {% endfor %}
         {% if not upcoming_blocks %}<div class="history-empty"><span aria-hidden="true">+</span><p>Accepted focus blocks will appear here.</p></div>{% endif %}
       </section>
-      <section class="panel integrations"><h3>Connected world</h3><div><span>G</span>Google Calendar <b>Ready</b></div><div><span>N</span>Notion <b>Ready</b></div><small>Cached plan available if sync fails</small></section>
+      <section class="panel integrations calendar-integration" aria-labelledby="calendar-integration-title">
+        <h3 id="calendar-integration-title">Google Calendar</h3>
+        {% if calendar_status.mode == 'disabled' %}
+        <p>Calendar integration is unavailable.</p>
+        {% elif calendar_status.connected %}
+        <div><span>G</span>Calendar <b>{{ 'Connected — Demo' if calendar_status.mode == 'demo' else 'Connected' }}</b></div>
+        {% if calendar_status.mode == 'demo' %}<small>Using simulated busy periods. No Google account data is accessed.</small>{% endif %}
+        <p>{{ calendar_status.busy_count }} busy periods considered over the next 7 days.</p>
+        {% if calendar_status.last_synced_at %}<small>Updated {{ calendar_status.last_synced_at.strftime('%Y-%m-%d %I:%M %p') }}</small>{% endif %}
+        <div class="integration-actions">
+          <form method="post" action="{{ url_for('main.sync_google_calendar') }}"><button type="submit">Sync {{ 'demo events' if calendar_status.mode == 'demo' else 'now' }}</button></form>
+          <form method="post" action="{{ url_for('main.disconnect_google_calendar') }}"><button type="submit">Disconnect</button></form>
+        </div>
+        {% elif calendar_status.status == 'connecting' %}
+        <p>Connection in progress.</p>
+        <form method="post" action="{{ url_for('main.connect_google_calendar') }}"><input type="hidden" name="reconnect" value="1"><button type="submit">Restart connection</button></form>
+        {% else %}
+        <p>Connect a calendar so focus suggestions avoid existing commitments.</p>
+        <form method="post" action="{{ url_for('main.connect_google_calendar') }}"><button class="button small" type="submit">Connect {{ 'demo calendar' if calendar_status.mode == 'demo' else 'Google Calendar' }}</button></form>
+        {% endif %}
+      </section>
     </aside>
   </div>
 </section>
