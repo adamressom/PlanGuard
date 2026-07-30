@@ -16,6 +16,7 @@ if (focusRoot) {
   const progressNumber = document.querySelector('[data-progress-number]');
   const progressError = document.querySelector('[data-progress-error]');
   const assignmentRows = document.querySelectorAll('[data-assignment-row]');
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
   let sessionId = display?.dataset.sessionId || null;
   let status = display?.dataset.status || null;
   let syncedRemaining = Number(display?.dataset.remainingSeconds || 0);
@@ -124,9 +125,12 @@ if (focusRoot) {
   };
 
   const request = async (url, options = {}) => {
+    const method = options.method || 'GET';
+    const headers = options.body ? {'Content-Type': 'application/json'} : {};
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) headers['X-CSRFToken'] = csrfToken;
     const response = await fetch(url, {
-      method: options.method || 'GET',
-      headers: options.body ? {'Content-Type': 'application/json'} : {},
+      method,
+      headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
     const data = await response.json();
@@ -154,7 +158,7 @@ if (focusRoot) {
   startButton?.addEventListener('click', async () => {
     try {
       startButton.disabled = true;
-      setMessage('Starting focus session...');
+      setMessage('Starting focus session…');
       await request('/api/focus-sessions', {method: 'POST', body: {assignment_id: Number(startButton.dataset.assignmentId), planned_minutes: Number(startButton.dataset.plannedMinutes)}});
       window.location.reload();
     } catch (error) {
@@ -169,9 +173,11 @@ if (focusRoot) {
     syncProgressInputs(focusTitle?.dataset.assignmentProgress || 0);
     setProgressError('');
     progressDialog?.showModal();
+    progressNumber?.focus();
   });
 
   progressClose?.addEventListener('click', () => progressDialog?.close());
+  progressDialog?.addEventListener('close', () => endButton?.focus());
   progressRange?.addEventListener('input', () => syncProgressInputs(progressRange.value));
   progressNumber?.addEventListener('input', () => syncProgressInputs(progressNumber.value));
 
@@ -221,7 +227,7 @@ if (focusRoot) {
     display.textContent = formatTime(remaining);
     if (remaining <= 0 && !completionSent) {
       completionSent = true;
-      setMessage('Focus block complete! Saving your session...');
+      setMessage('Focus session complete. Saving…');
       sendAction('end', {reason: 'timer_complete'});
     }
   };

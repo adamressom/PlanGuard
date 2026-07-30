@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090b13">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}PlanGuard{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,12 +25,15 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/focus-history.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/scheduling.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-states.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/accessibility.css') }}">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <header class="nav shell">
     <a class="brand" href="/"><span class="brand-mark">P</span>PlanGuard</a>
-    <nav>
+    <nav aria-label="Primary navigation">
       <a href="/dashboard">Dashboard</a><a href="/#how">How it works</a>
       {% if g.user %}
       <details class="account-menu">
@@ -38,7 +42,7 @@
           <div class="account-identity"><span class="avatar avatar-small">{{ g.user.initials }}</span><div><b>{{ g.user.display_name }}</b><small>{{ g.user.email }}</small></div></div>
           <a href="/dashboard">Dashboard</a>
           <a href="{{ url_for('main.availability_page') }}">Availability</a>
-          <form method="post" action="{{ url_for('auth.logout') }}"><button type="submit">Log out</button></form>
+          <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Log out</button></form>
         </div>
       </details>
       {% else %}
@@ -47,9 +51,9 @@
     </nav>
   </header>
   {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}<div class="flash-stack shell">{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% if messages %}<div class="flash-stack shell" role="status" aria-live="polite">{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}
   {% endwith %}
-  <main>{% block content %}{% endblock %}</main>
+  <main id="main-content" tabindex="-1">{% block content %}{% endblock %}</main>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   <script src="{{ url_for('static', filename='js/delete.js') }}"></script>
   <script src="{{ url_for('static', filename='js/progress.js') }}"></script>

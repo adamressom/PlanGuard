@@ -14,6 +14,7 @@
     <p class="auth-subtitle">Pick up exactly where you left off.</p>
     {% if error %}<div class="form-error" role="alert">{{ error }}</div>{% endif %}
     <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
       <label for="email">Email address</label>
       <input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" required autofocus>

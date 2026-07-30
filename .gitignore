@@ -7,4 +7,5 @@ venv/
 instance/
 htmlcov/
 .coverage
+coverage.xml
 

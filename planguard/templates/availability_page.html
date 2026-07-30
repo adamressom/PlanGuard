@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Availability - PlanGuard{% endblock %}
+{% block title %}Availability — PlanGuard{% endblock %}
 {% block content %}
 <section class="dashboard shell schedule-page">
   <div class="dash-heading">
@@ -10,6 +10,7 @@
     <section class="panel">
       <div class="panel-title"><div><span>WEEKLY</span><h2>Recurring availability</h2></div></div>
       <form class="schedule-form" method="post" action="{{ url_for('main.add_weekly_availability') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Day<select name="weekday" required>{% for value, label in weekdays %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
         <label>Start<input name="starts_at_time" type="time" required></label>
         <label>End<input name="ends_at_time" type="time" required></label>
@@ -26,6 +27,7 @@
     <section class="panel">
       <div class="panel-title"><div><span>EXCEPTIONS</span><h2>Specific-day changes</h2></div></div>
       <form class="schedule-form" method="post" action="{{ url_for('main.add_availability_override') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Date<input name="date" type="date" required></label>
         <label>Start<input name="starts_at_time" type="time" required></label>
         <label>End<input name="ends_at_time" type="time" required></label>

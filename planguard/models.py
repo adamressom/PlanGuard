@@ -43,12 +43,22 @@ class Assignment(db.Model):
     progress = db.Column(db.Integer, nullable=False, default=0)
     completed = db.Column(db.Boolean, nullable=False, default=False)
     notes = db.Column(db.Text, nullable=False, default="")
+    provider = db.Column(db.String(40), nullable=False, default="manual")
     provider_id = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     @property
     def course_impact(self):
         return self.course_weight
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "user_id",
+            "provider",
+            "provider_id",
+            name="uq_assignment_user_provider_id",
+        ),
+    )
 
 
 class WeeklyAvailability(db.Model):
@@ -98,6 +108,8 @@ class IntegrationState(db.Model):
     last_error_code = db.Column(db.String(80))
     connected_at = db.Column(db.DateTime)
     last_synced_at = db.Column(db.DateTime)
+    last_sync_attempt_at = db.Column(db.DateTime)
+    sync_status = db.Column(db.String(20), nullable=False, default="never")
     retry_count = db.Column(db.Integer, nullable=False, default=0)
     cached_payload = db.Column(db.JSON)
     credential = db.relationship(
@@ -132,6 +144,28 @@ class OAuthCredential(db.Model):
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class NotionImportSource(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    integration_id = db.Column(
+        db.Integer,
+        db.ForeignKey("integration_state.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    data_source_id = db.Column(db.String(255), nullable=False)
+    source_name = db.Column(db.String(255), nullable=False)
+    property_schema = db.Column(db.JSON, nullable=False, default=dict)
+    property_mapping = db.Column(db.JSON, nullable=False, default=dict)
+    last_imported_at = db.Column(db.DateTime)
+    last_summary = db.Column(db.JSON)
+    selected_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    integration = db.relationship(
+        "IntegrationState",
+        backref=db.backref("notion_source", uselist=False, cascade="all, delete-orphan"),
     )
 
 

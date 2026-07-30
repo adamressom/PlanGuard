@@ -50,3 +50,27 @@ history. Tests inject provider behavior and require no live Google calls.
 
 The scheduler checks calendar conflicts while recommending and again when a
 student accepts or manually adjusts a block.
+
+## Live synchronization and cached fallback
+
+Live synchronization reads every selected calendar with reader access or
+better. It follows calendar and event pagination, expands recurring events, and
+queries from the beginning of today through eight days ahead. Cancelled,
+declined, transparent, and working-location events are ignored. Opaque timed
+and all-day events become generic UTC `Busy` ranges.
+
+The cache is a versioned, privacy-reduced snapshot containing only its time
+zone, exact coverage range, and merged busy ranges. A complete successful sync
+replaces it atomically and updates `last_synced_at`; an empty complete result is
+valid and clears old conflicts. Partial or failed retrieval never overwrites the
+last complete cache.
+
+Transient reads use at most three attempts with bounded exponential backoff.
+When all attempts fail, PlanGuard uses the previous cache if it fully covers the
+planning range. The dashboard distinguishes live, cached, syncing, stale, and
+error states. Disconnecting clears both credentials and cached availability.
+
+Status is derived from real connection and synchronization transitions.
+`Synced` appears only after a complete successful API sync, while `Using cached
+data` appears after a failed live attempt with valid cache coverage. The last
+successful sync time is retained separately from the latest attempt.

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Schedule {{ assignment.title }} - PlanGuard{% endblock %}
+{% block title %}Schedule {{ assignment.title }} — PlanGuard{% endblock %}
 {% block content %}
 <section class="dashboard shell schedule-page">
   <div class="dash-heading">
@@ -14,7 +14,7 @@
   </section>
   {% else %}
   {% if calendar_status and calendar_status.connected %}
-  <div class="schedule-callout" role="status"><b>{{ 'Demo calendar' if calendar_status.mode == 'demo' else 'Calendar-aware' }}</b> Suggestions avoid {{ calendar_status.busy_count }} {{ 'simulated ' if calendar_status.mode == 'demo' else '' }}busy periods.</div>
+  <div class="schedule-callout" role="status"><b>{{ 'Demo calendar' if calendar_status.mode == 'demo' else ('Cached calendar' if calendar_status.sync_status == 'cached' else 'Calendar-aware') }}</b> Suggestions avoid {{ calendar_status.busy_count }} {{ 'simulated ' if calendar_status.mode == 'demo' else '' }}busy periods.{% if calendar_status.sync_status == 'cached' %} Google is unavailable, so PlanGuard is using the last complete sync.{% endif %}</div>
   {% endif %}
   <div class="schedule-grid">
     <section class="panel">
@@ -24,6 +24,7 @@
       <article class="suggestion-row">
         <div><b>{{ suggestion.starts_at.strftime('%a %b %d') }}</b><span>{{ suggestion.starts_at.strftime('%I:%M %p') }} - {{ suggestion.ends_at.strftime('%I:%M %p') }}</span>{% if suggestion.warning %}<small>{{ suggestion.warning }}</small>{% endif %}</div>
         <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="action" value="accept">
           <input type="hidden" name="starts_at" value="{{ suggestion.starts_at.isoformat() }}">
           <input type="hidden" name="planned_minutes" value="{{ suggestion.planned_minutes }}">
@@ -44,7 +45,7 @@
         <p>This assignment is meaningfully higher priority than another scheduled block. You can adjust manually below before replacing anything.</p>
       </div>
       {% endif %}
-      <form method="post" class="dismiss-form"><button name="action" value="dismiss" type="submit">Dismiss suggestions</button></form>
+      <form method="post" class="dismiss-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button name="action" value="dismiss" type="submit">Dismiss suggestions</button></form>
     </section>
     <section class="panel">
       <div class="panel-title"><div><span>MANUAL</span><h2>Choose a time</h2></div></div>
@@ -52,6 +53,7 @@
       <div class="schedule-warning">
         {% for warning in warnings %}<p>{{ warning }}</p>{% endfor %}
         <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="action" value="adjust">
           <input type="hidden" name="starts_at" value="{{ proposed_start.isoformat() }}">
           <input type="hidden" name="planned_minutes" value="{{ proposed_minutes }}">
@@ -67,6 +69,7 @@
         <div class="conflict-actions">
           {% for option, label in (('combine', 'Combine'), ('replace_existing', 'Replace'), ('reschedule_existing', 'Reschedule existing'), ('keep_current_plan', 'Keep current plan')) %}
           <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="adjust">
             <input type="hidden" name="starts_at" value="{{ proposed_start.isoformat() }}">
             <input type="hidden" name="planned_minutes" value="{{ proposed_minutes }}">
@@ -79,6 +82,7 @@
       </div>
       {% endif %}
       <form class="schedule-form" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="action" value="adjust">
         <label>Start<input name="starts_at" type="datetime-local" value="{{ proposed_start.strftime('%Y-%m-%dT%H:%M') if proposed_start else '' }}" required></label>
         <label>Duration<input name="planned_minutes" type="number" min="1" max="240" value="{{ proposed_minutes or (assignment.estimated_minutes if assignment.estimated_minutes < 90 else 90) }}" required></label>

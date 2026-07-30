@@ -1,0 +1,32 @@
+{% if dashboard_state.loading %}
+<section class="dashboard-state state-loading panel" role="status" aria-live="polite" aria-busy="true">
+  <span class="state-icon state-spinner" aria-hidden="true"></span>
+  <div><span class="kicker">Updating your plan</span><h2>Syncing your latest data…</h2><p>Your saved plan remains available while this finishes.</p></div>
+</section>
+{% endif %}
+
+{% if dashboard_state.first_time %}
+<section class="dashboard-state state-onboarding panel" aria-labelledby="onboarding-title">
+  <span class="state-icon" aria-hidden="true">1</span>
+  <div><span class="kicker">Start here</span><h2 id="onboarding-title">Add your first assignment.</h2><p>PlanGuard will rank it, explain its priority, and help you protect time to finish it.</p></div>
+  <div class="state-actions"><a class="button" href="{{ url_for('main.new_assignment') }}">Add assignment</a><a class="text-link" href="{{ url_for('main.availability_page') }}">Set availability</a></div>
+</section>
+{% elif dashboard_state.nothing_urgent %}
+<section class="dashboard-state state-calm panel" role="status">
+  <span class="state-icon" aria-hidden="true">✓</span>
+  <div><span class="kicker">Plan is clear</span><h2>Nothing urgent right now.</h2><p>Your active assignments are currently low priority. Make steady progress or take a well-earned break.</p></div>
+</section>
+{% endif %}
+
+{% if dashboard_state.using_cached_calendar %}
+<section class="dashboard-state state-warning panel" role="status">
+  <span class="state-icon" aria-hidden="true">↻</span>
+  <div><span class="kicker">Using cached data</span><h2>Your plan is still protected.</h2><p>Google Calendar is unavailable, so PlanGuard is avoiding conflicts from your last successful sync.</p></div>
+</section>
+{% elif dashboard_state.calendar_error %}
+<section class="dashboard-state state-error panel" role="alert">
+  <span class="state-icon" aria-hidden="true">!</span>
+  <div><span class="kicker">Calendar needs attention</span><h2>Live and cached calendar data are unavailable.</h2><p>Review suggested times carefully, then retry the sync or reconnect Google Calendar.</p></div>
+  <a class="text-link" href="#calendar-integration-title">Review calendar status</a>
+</section>
+{% endif %}

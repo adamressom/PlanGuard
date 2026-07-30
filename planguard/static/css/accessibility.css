@@ -1,0 +1,148 @@
+.skip-link {
+  position: fixed;
+  left: 16px;
+  top: 12px;
+  z-index: 1000;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--lime);
+  color: #0a0d10;
+  font-weight: 800;
+  transform: translateY(-150%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--lime);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px #090b13;
+}
+
+:where(button, input, select, textarea) {
+  font: inherit;
+}
+
+:where(.panel, .task-row, .task-info, .task-title-line, .integrations, .history-copy) {
+  min-width: 0;
+}
+
+:where(h1, h2, h3, h4, p, a, button, label, small, span) {
+  overflow-wrap: anywhere;
+}
+
+dialog {
+  width: min(480px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .shell {
+    width: min(100% - 24px, 1160px);
+  }
+
+  .nav {
+    height: auto;
+    min-height: 70px;
+    gap: 12px;
+    padding: 10px 0;
+  }
+
+  .nav nav {
+    gap: 10px;
+  }
+
+  .panel {
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .dashboard {
+    padding: 42px 0;
+  }
+
+  .task-row {
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .task-score {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .task-actions,
+  .task-title-line,
+  .panel-title,
+  .integration-actions {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .progress-input-row {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-input-row .complete-button {
+    grid-column: auto;
+  }
+
+  .progress-input-row button,
+  .completed-row button,
+  .preset-button,
+  .custom-availability button,
+  .integration-actions button,
+  .history-row form button {
+    min-height: 44px;
+  }
+
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .form-actions .button,
+  .form-actions .text-link {
+    width: 100%;
+    min-height: 44px;
+    text-align: center;
+  }
+
+  .preview-copy h2 {
+    font-size: clamp(34px, 11vw, 52px);
+  }
+}
+
+@media (max-width: 420px) {
+  .hero h1 {
+    font-size: clamp(42px, 14vw, 56px);
+  }
+
+  .brand {
+    font-size: 18px;
+  }
+
+  .timer {
+    font-size: clamp(38px, 15vw, 54px);
+  }
+
+  dialog,
+  .delete-dialog {
+    width: calc(100% - 20px);
+    padding: 24px;
+  }
+}

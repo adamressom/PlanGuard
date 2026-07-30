@@ -2,20 +2,21 @@
 {% block title %}Command Center — PlanGuard{% endblock %}
 {% block content %}
 <section class="dashboard shell">
-  <div class="dash-heading"><div><span class="kicker">Tuesday's command center</span><h1>Protect your momentum.</h1></div><a class="button" href="{{ url_for('main.new_assignment') }}">+ Add assignment</a></div>
+  <div class="dash-heading"><div><span class="kicker">Your command center</span><h1>Protect your momentum.</h1></div><a class="button" href="{{ url_for('main.new_assignment') }}">+ Add assignment</a></div>
+  {% include "_dashboard_state.html" %}
   <section class="availability-panel panel" aria-labelledby="availability-title">
     <div class="availability-copy"><span class="availability-icon" aria-hidden="true">◷</span><div><span class="kicker">Today's capacity</span><h2 id="availability-title">I have <strong>{{ available_minutes }}</strong> minutes to study</h2><p>Saved to your account · recommendations update instantly</p></div></div>
     <div class="availability-controls">
       <div class="preset-row" aria-label="Study time presets">
-        {% for minutes in (30, 60, 120, 180, 240) %}<form method="post" action="{{ url_for('main.update_availability') }}"><button name="available_minutes" value="{{ minutes }}" class="preset-button{% if available_minutes == minutes %} active{% endif %}" type="submit">{{ minutes }}m</button></form>{% endfor %}
+        {% for minutes in (30, 60, 120, 180, 240) %}<form method="post" action="{{ url_for('main.update_availability') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button name="available_minutes" value="{{ minutes }}" class="preset-button{% if available_minutes == minutes %} active{% endif %}" type="submit">{{ minutes }}m</button></form>{% endfor %}
       </div>
-      <form class="custom-availability" method="post" action="{{ url_for('main.update_availability') }}"><label for="available-minutes">Custom</label><input id="available-minutes" name="available_minutes" type="number" min="0" max="1440" step="1" value="{{ available_minutes }}" required><span>min</span><button type="submit">Update plan</button></form>
+      <form class="custom-availability" method="post" action="{{ url_for('main.update_availability') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="available-minutes">Custom</label><input id="available-minutes" name="available_minutes" type="number" min="0" max="1440" step="1" value="{{ available_minutes }}" required><span>min</span><button type="submit">Update plan</button></form>
     </div>
   </section>
   <div class="dash-grid">
     <div class="queue-stack">
       <section class="panel queue">
-        <div class="panel-title"><div><span>ACTIVE PRIORITY QUEUE</span><h2>Your next moves</h2></div><span class="sync">● Synced</span></div>
+        <div class="panel-title"><div><span>ACTIVE PRIORITY QUEUE</span><h2>Your next moves</h2></div><span class="sync">● Ranked now</span></div>
         {% for item in assignments %}
         <article class="task-row{% if loop.first %} top-recommendation{% endif %}{% if item.is_overdue %} overdue-task{% endif %}" data-assignment-row data-assignment-id="{{ item.id }}">
           <div class="rank">{% if loop.first %}<span class="top-crown">★</span>{% endif %}{{ '%02d'|format(loop.index) }}</div>
@@ -26,6 +27,7 @@
               <div class="task-actions"><a class="edit-link" href="{{ url_for('main.edit_assignment', assignment_id=item.id) }}" aria-label="Edit {{ item.title }}"><span aria-hidden="true">✎</span> Edit</a><button class="delete-link" type="button" data-delete-open data-delete-name="{{ item.title }}" data-delete-url="{{ url_for('main.delete_assignment_page', assignment_id=item.id) }}" aria-label="Delete {{ item.title }}"><span aria-hidden="true">×</span> Delete</button></div>
             </div>
             <form class="progress-form" method="post" action="{{ url_for('main.update_assignment_progress', assignment_id=item.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <label for="progress-{{ item.id }}">Progress <output data-progress-output>{{ item.progress }}%</output></label>
               <div class="progress-input-row"><input id="progress-{{ item.id }}" name="progress" type="range" min="0" max="100" value="{{ item.progress }}" data-progress-input><button type="submit" name="action" value="save_progress">Save</button><button class="complete-button" type="submit" name="action" value="mark_complete">✓ Mark complete</button></div>
             </form>
@@ -50,7 +52,7 @@
           <div class="task-score"><b>{{ item.priority_score|int }}</b><span>score</span></div>
         </article>
         {% endfor %}
-        {% if not assignments %}<div class="empty-state"><h3>Your active queue is clear.</h3><p>Add an assignment or review your completed work below.</p></div>{% endif %}
+        {% if not assignments %}<div class="empty-state"><h3>Your active queue is clear.</h3><p>Add an assignment or review your completed work below.</p><a class="button small" href="{{ url_for('main.new_assignment') }}">Add assignment</a></div>{% endif %}
       </section>
 
       <section class="panel completed-queue">
@@ -59,7 +61,7 @@
         <article class="completed-row">
           <div class="completed-check">✓</div>
           <div><small>{{ item.course }}</small><h3><a href="{{ url_for('main.assignment_detail', assignment_id=item.id) }}">{{ item.title }}</a></h3><span>{{ item.progress }}% progress</span></div>
-          <form method="post" action="{{ url_for('main.update_assignment_progress', assignment_id=item.id) }}"><button type="submit" name="action" value="mark_incomplete">Mark incomplete</button></form>
+          <form method="post" action="{{ url_for('main.update_assignment_progress', assignment_id=item.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" name="action" value="mark_incomplete">Mark incomplete</button></form>
         </article>
         {% endfor %}
         {% if not completed_assignments %}<p class="completed-empty">Completed assignments will move here.</p>{% endif %}
@@ -82,7 +84,7 @@
         <p class="focus-message" role="status" aria-live="polite" data-focus-message></p>
         {% else %}
         <span class="kicker">#1 recommendation</span>
-        {% if recommended %}<div class="recommendation-score"><b>{{ recommended.priority_score|int }}</b><span>priority score</span></div><h3>{{ recommended.title }}</h3><p class="recommendation-due {{ recommended.deadline_status }}">{{ recommended.due_label }}</p><p class="time-fit {{ 'fits' if recommended.fits_available_time else 'exceeds' }}"><span aria-hidden="true">{{ '✓' if recommended.fits_available_time else '↗' }}</span>{{ recommended.time_fit_label }}</p><div class="timer">{{ recommended_focus_minutes }}:00</div><button class="button ghost" type="button" data-focus {% if available_minutes == 0 %}disabled{% endif %} data-focus-start data-assignment-id="{{ recommended.id }}" data-planned-minutes="{{ recommended_focus_minutes }}">Start focus block</button>{% else %}<div class="timer">—</div><p>Your active queue is clear</p><button class="button ghost" type="button" disabled>Start focus block</button>{% endif %}
+        {% if recommended %}<div class="recommendation-score"><b>{{ recommended.priority_score|int }}</b><span>priority score</span></div><h3>{{ recommended.title }}</h3><p class="recommendation-due {{ recommended.deadline_status }}">{{ recommended.due_label }}</p><p class="time-fit {{ 'fits' if recommended.fits_available_time else 'exceeds' }}"><span aria-hidden="true">{{ '✓' if recommended.fits_available_time else '↗' }}</span>{{ recommended.time_fit_label }}</p><div class="timer">{{ recommended_focus_minutes }}:00</div><button class="button ghost" type="button" data-focus {% if available_minutes == 0 %}disabled{% endif %} data-focus-start data-assignment-id="{{ recommended.id }}" data-planned-minutes="{{ recommended_focus_minutes }}">Start focus session</button>{% else %}<div class="timer">—</div><p>Your active queue is clear</p><button class="button ghost" type="button" disabled>Start focus session</button>{% endif %}
         <p class="focus-message" role="status" aria-live="polite" data-focus-message></p>
         {% endif %}
       </section>
@@ -95,15 +97,15 @@
           <div class="history-duration"><b>{{ session.completed_seconds // 60 }}:{{ '%02d'|format(session.completed_seconds % 60) }}</b><span>{{ 'completed' if session.status == 'completed' else 'ended early' }}</span></div>
         </article>
         {% endfor %}
-        {% if not focus_history %}<div class="history-empty"><span aria-hidden="true">◷</span><p>Finish a focus block and your recent study history will appear here.</p></div>{% endif %}
+        {% if not focus_history %}<div class="history-empty"><span aria-hidden="true">◷</span><p>Finish a focus session and your recent study history will appear here.</p></div>{% endif %}
       </section>
       <section class="panel planned-blocks" aria-labelledby="planned-blocks-title">
         <div class="history-heading"><div><span class="kicker">Scheduled</span><h3 id="planned-blocks-title">Planned focus</h3></div><span class="history-count">{{ upcoming_blocks|length }}</span></div>
         {% for block in upcoming_blocks %}
         <article class="history-row">
           <span class="history-status scheduled" aria-label="scheduled focus block">+</span>
-          <div class="history-copy"><h4>{{ block.assignment.title if block.assignment else 'Planned focus block' }}</h4><p>{{ block.starts_at.strftime('%Y-%m-%d') }} - {{ block.starts_at.strftime('%I:%M %p') }} to {{ block.ends_at.strftime('%I:%M %p') }}</p></div>
-          <form method="post" action="{{ url_for('main.start_scheduled_focus_block', block_id=block.id) }}"><button type="submit">Start</button></form>
+          <div class="history-copy"><h4>{{ block.assignment.title if block.assignment else 'Planned focus block' }}</h4><p>{{ block.starts_at.strftime('%Y-%m-%d') }} · {{ block.starts_at.strftime('%I:%M %p') }}–{{ block.ends_at.strftime('%I:%M %p') }}</p></div>
+          <form method="post" action="{{ url_for('main.start_scheduled_focus_block', block_id=block.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Start</button></form>
         </article>
         {% endfor %}
         {% if not upcoming_blocks %}<div class="history-empty"><span aria-hidden="true">+</span><p>Accepted focus blocks will appear here.</p></div>{% endif %}
@@ -113,20 +115,64 @@
         {% if calendar_status.mode == 'disabled' %}
         <p>Calendar integration is unavailable.</p>
         {% elif calendar_status.connected %}
-        <div><span>G</span>Calendar <b>{{ 'Connected — Demo' if calendar_status.mode == 'demo' else 'Connected' }}</b></div>
+        <div><span>G</span>Calendar <b>
+          {% if calendar_status.sync_status == 'syncing' %}Syncing
+          {% elif calendar_status.sync_status == 'cached' %}Using cached data
+          {% elif calendar_status.sync_status == 'error' %}Error
+          {% elif calendar_status.sync_status == 'live' %}Synced{% if calendar_status.mode == 'demo' %} — Demo{% endif %}
+          {% elif calendar_status.mode == 'demo' %}Connected — Demo
+          {% else %}Connected{% endif %}
+        </b></div>
         {% if calendar_status.mode == 'demo' %}<small>Using simulated busy periods. No Google account data is accessed.</small>{% endif %}
+        {% if calendar_status.sync_status == 'cached' %}<p class="schedule-warning">Google is unavailable. Your last complete calendar sync is still protecting focus suggestions.</p>{% endif %}
+        {% if calendar_status.sync_status == 'error' %}<p class="schedule-error">Google Calendar data could not be updated, and no usable cache covers the planning window.</p>{% endif %}
+        {% if calendar_status.cache_is_stale and calendar_status.sync_status != 'error' %}<p class="schedule-warning">Google Calendar data may be outdated.</p>{% endif %}
         <p>{{ calendar_status.busy_count }} busy periods considered over the next 7 days.</p>
-        {% if calendar_status.last_synced_at %}<small>Updated {{ calendar_status.last_synced_at.strftime('%Y-%m-%d %I:%M %p') }}</small>{% endif %}
+        {% if calendar_status.last_synced_at %}<small>Last successful sync: {{ calendar_status.last_synced_at.strftime('%Y-%m-%d %I:%M %p') }}</small>{% endif %}
         <div class="integration-actions">
-          <form method="post" action="{{ url_for('main.sync_google_calendar') }}"><button type="submit">Sync {{ 'demo events' if calendar_status.mode == 'demo' else 'now' }}</button></form>
-          <form method="post" action="{{ url_for('main.disconnect_google_calendar') }}"><button type="submit">Disconnect</button></form>
+          <form method="post" action="{{ url_for('main.sync_google_calendar') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Sync calendar</button></form>
+          <form method="post" action="{{ url_for('main.disconnect_google_calendar') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Disconnect</button></form>
         </div>
         {% elif calendar_status.status == 'connecting' %}
         <p>Connection in progress.</p>
-        <form method="post" action="{{ url_for('main.connect_google_calendar') }}"><input type="hidden" name="reconnect" value="1"><button type="submit">Restart connection</button></form>
+        <form method="post" action="{{ url_for('main.connect_google_calendar') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="reconnect" value="1"><button type="submit">Restart connection</button></form>
+        {% elif calendar_status.status == 'expired' %}
+        <p>Your calendar authorization expired. Reconnect to update availability.</p>
+        <form method="post" action="{{ url_for('main.connect_google_calendar') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="reconnect" value="1"><button class="button small" type="submit">Reconnect Google Calendar</button></form>
         {% else %}
         <p>Connect a calendar so focus suggestions avoid existing commitments.</p>
-        <form method="post" action="{{ url_for('main.connect_google_calendar') }}"><button class="button small" type="submit">Connect {{ 'demo calendar' if calendar_status.mode == 'demo' else 'Google Calendar' }}</button></form>
+        <form method="post" action="{{ url_for('main.connect_google_calendar') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button small" type="submit">Connect {{ 'demo calendar' if calendar_status.mode == 'demo' else 'Google Calendar' }}</button></form>
+        {% endif %}
+      </section>
+      <section class="panel integrations" aria-labelledby="notion-integration-title">
+        <h3 id="notion-integration-title">Notion</h3>
+        {% if notion_mode == 'disabled' %}
+        <p>Notion integration is unavailable.</p>
+        {% elif notion_integration and notion_integration.status == 'connected' %}
+        <div><span>N</span>Workspace <b>
+          {% if notion_integration.sync_status == 'syncing' %}Syncing
+          {% elif notion_integration.sync_status == 'live' %}Synced{% if notion_integration.mode == 'demo' %} — Demo{% endif %}
+          {% elif notion_integration.sync_status == 'error' %}Error
+          {% else %}Connected{% if notion_integration.mode == 'demo' %} — Demo{% endif %}{% endif %}
+        </b></div>
+        {% if notion_integration.mode == 'demo' %}<small>Using simulated assignments. No Notion account data is accessed.</small>{% endif %}
+        {% if notion_integration.notion_source %}
+        <p>Import source: {{ notion_integration.notion_source.source_name }}</p>
+        {% if notion_integration.notion_source.last_imported_at %}<small>Last successful sync: {{ notion_integration.notion_source.last_imported_at.strftime('%Y-%m-%d %I:%M %p') }}</small>{% endif %}
+        {% if notion_integration.sync_status == 'error' %}<p class="schedule-error">Notion could not be read. Try importing again; reconnect if the error continues.</p>{% endif %}
+        <a class="button small" href="{{ url_for('main.notion_mapping') }}">Import assignments</a>
+        {% else %}
+        <a class="button small" href="{{ url_for('main.notion_sources') }}">Choose source</a>
+        {% endif %}
+        <div class="integration-actions">
+          <a href="{{ url_for('main.notion_sources') }}">Change source</a>
+          <form method="post" action="{{ url_for('main.disconnect_notion') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Disconnect</button></form>
+        </div>
+        {% elif notion_integration and notion_integration.status == 'connecting' %}
+        <p>Notion connection in progress.</p>
+        {% else %}
+        <p>Import assignments instead of entering each one manually.</p>
+        <form method="post" action="{{ url_for('main.connect_notion') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button small" type="submit">Connect {{ 'demo Notion' if notion_mode == 'demo' else 'Notion' }}</button></form>
         {% endif %}
       </section>
     </aside>
@@ -134,12 +180,12 @@
 </section>
 {% include "_delete_dialog.html" %}
 {% if active_focus %}
-<dialog id="progress-dialog" data-focus-progress-dialog>
+<dialog id="progress-dialog" data-focus-progress-dialog aria-labelledby="progress-dialog-title" aria-describedby="progress-dialog-description">
   <form method="dialog" data-focus-progress-form>
     <button class="dialog-close" type="button" data-focus-progress-close aria-label="Close">x</button>
     <span class="kicker">Focus progress</span>
-    <h2>Update assignment progress</h2>
-    <p data-progress-copy>How complete is {{ active_focus.assignment_title }} now?</p>
+    <h2 id="progress-dialog-title">Update assignment progress</h2>
+    <p id="progress-dialog-description" data-progress-copy>How complete is {{ active_focus.assignment_title }} now?</p>
     <label for="focus-progress-range">Progress</label>
     <div class="progress-control">
       <input id="focus-progress-range" name="progress" type="range" min="0" max="100" step="10" value="{{ active_focus_progress or 0 }}" data-progress-range>
