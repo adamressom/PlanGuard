@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PlanGuard — Project Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    :root{--navy:#0f172a;--navy-2:#111d35;--navy-3:#1e293b;--blue:#0284c7;--cyan:#38bdf8;--sky:#e0f2fe;--paper:#f8fafc;--white:#fff;--ink:#0f172a;--muted:#64748b;--line:#cbd5e1;--soft:#eef6fb}
+    *{box-sizing:border-box}
+    html{background:#dbe3ea;scroll-behavior:smooth}
+    body{margin:0;padding:36px 0;font-family:'Inter',sans-serif;color:var(--ink)}
+    .deck{display:grid;gap:36px;justify-content:center}
+    .slide-container{position:relative;width:1280px;height:720px;overflow:hidden;background:var(--paper);box-shadow:0 20px 50px rgba(15,23,42,.2)}
+    .slide-container:after{content:attr(data-slide);position:absolute;right:48px;bottom:26px;color:#94a3b8;font:600 14px 'Poppins',sans-serif;letter-spacing:.08em}
+    .slide-inner{height:100%;padding:62px 72px}
+    .dark{background:var(--navy);color:var(--white)}
+    .dark:before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 85% 15%,rgba(56,189,248,.27),transparent 28%),linear-gradient(135deg,#0f172a 8%,#102340 55%,#0369a1 150%)}
+    .dark .slide-inner{position:relative;z-index:1}
+    h1,h2,h3,p{margin-top:0}
+    h1,h2,h3{font-family:'Poppins',sans-serif}
+    h1{font-size:78px;line-height:1.02;letter-spacing:-.04em}
+    h2{font-size:44px;line-height:1.13;letter-spacing:-.025em;margin-bottom:14px}
+    h3{font-size:23px;line-height:1.25}
+    p,li,td,th{font-size:18px;line-height:1.5}
+    .eyebrow{display:flex;align-items:center;gap:12px;margin-bottom:10px;color:var(--blue);font:700 14px 'Poppins',sans-serif;letter-spacing:.13em;text-transform:uppercase}
+    .eyebrow:before{content:'';width:34px;height:4px;background:var(--cyan)}
+    .dark .eyebrow{color:#bae6fd}
+    .slide-rule{width:70px;height:5px;margin:18px 0 34px;background:var(--cyan)}
+    .badge{display:inline-flex;align-items:center;gap:10px;padding:9px 16px;border:1px solid rgba(186,230,253,.45);border-radius:999px;background:rgba(2,132,199,.18);color:#e0f2fe;font:700 13px 'Poppins',sans-serif;letter-spacing:.1em}
+    .subtitle{max-width:880px;color:#d7e8f5;font-size:23px;line-height:1.55}
+    .presenters{position:absolute;left:72px;bottom:68px;color:#bae6fd;font-size:16px}
+    .presenters b{display:block;margin-bottom:6px;color:#fff;font:600 14px 'Poppins',sans-serif;text-transform:uppercase;letter-spacing:.09em}
+    .decor-grid{position:absolute;right:70px;bottom:70px;display:grid;grid-template-columns:repeat(4,22px);gap:8px;opacity:.55}
+    .decor-grid i{width:22px;height:22px;border:1px solid #38bdf8}
+    .three-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:50px}
+    .tile{position:relative;min-height:360px;padding:36px 30px 30px;border-top:6px solid var(--blue);background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.08)}
+    .tile .icon{display:grid;place-items:center;width:58px;height:58px;margin-bottom:30px;border-radius:14px;background:var(--sky);color:var(--blue);font-size:25px}
+    .tile h3{margin-bottom:14px}
+    .tile p{color:var(--muted)}
+    .tile .role{position:absolute;left:30px;bottom:28px;color:var(--blue);font:700 14px 'Poppins',sans-serif;text-transform:uppercase;letter-spacing:.05em}
+    .problem-grid{display:grid;grid-template-columns:1fr 1.08fr;gap:70px;margin-top:24px}
+    .metrics{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .metric{padding:20px 22px;border-left:6px solid var(--cyan);background:#fff;box-shadow:0 8px 22px rgba(15,23,42,.07)}
+    .metric:first-child{grid-column:1/-1}
+    .metric strong{display:block;color:var(--blue);font:800 55px 'Poppins',sans-serif;line-height:1}
+    .metric span{display:block;margin-top:8px;color:var(--muted);font-size:15px;line-height:1.35}
+    .problem-copy{padding:8px 0}
+    .problem-copy h3{font-size:26px}
+    .check-list{padding:0;margin:25px 0;list-style:none}
+    .check-list li{position:relative;margin:20px 0;padding-left:38px;color:#334155}
+    .check-list li:before{content:'\f071';position:absolute;left:0;top:2px;color:var(--blue);font:900 19px 'Font Awesome 6 Free'}
+    .source-note{position:absolute;left:72px;bottom:28px;color:#94a3b8;font-size:11px}
+    .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:52px}
+    .compare{min-height:390px;padding:32px 36px;background:#fff;border:1px solid #dbe3ec}
+    .compare:nth-child(2){background:var(--navy);color:#fff;border-color:var(--navy)}
+    .compare-head{display:flex;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--line)}
+    .compare:nth-child(2) .compare-head{border-color:#334155}
+    .compare-head i{color:var(--blue);font-size:28px}
+    .compare:nth-child(2) .compare-head i{color:var(--cyan)}
+    .compare h3{margin:0;font-size:25px}
+    .compare ul{padding-left:21px;margin-top:25px}
+    .compare li{margin:17px 0;color:#475569}
+    .compare:nth-child(2) li{color:#cbd5e1}
+    .solution{background:var(--navy);color:#fff}
+    .solution-copy{position:relative;z-index:3;width:52%;height:100%;padding:72px;background:linear-gradient(90deg,#0f172a 77%,rgba(15,23,42,.86) 90%,transparent)}
+    .solution-copy h2{margin-top:120px;font-size:54px}
+    .solution-copy p{max-width:560px;color:#cbd5e1;font-size:21px}
+    .solution-visual{position:absolute;inset:0 0 0 42%;overflow:hidden;background:radial-gradient(circle at 58% 46%,rgba(56,189,248,.7),transparent 7%),radial-gradient(circle at 58% 46%,rgba(2,132,199,.36),transparent 24%),linear-gradient(145deg,#0d1a31,#06101f)}
+    .solution-visual:before,.solution-visual:after{content:'';position:absolute;width:800px;height:190px;right:-90px;border:6px solid rgba(56,189,248,.7);border-left-color:transparent;border-radius:50%;transform:rotate(-18deg)}
+    .solution-visual:before{top:210px;box-shadow:0 0 0 22px rgba(2,132,199,.16),0 0 0 52px rgba(56,189,248,.07)}
+    .solution-visual:after{top:330px;right:-150px;opacity:.45}
+    .flow-nodes{position:absolute;inset:0;background-image:radial-gradient(circle,#7dd3fc 0 3px,transparent 4px);background-size:95px 70px;opacity:.36}
+    .solution-label{display:inline-flex;gap:10px;align-items:center;color:#7dd3fc;font:700 14px 'Poppins',sans-serif;letter-spacing:.1em;text-transform:uppercase}
+    .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px}
+    .feature{min-height:390px;padding:34px 30px;background:#fff;border-bottom:6px solid var(--blue);box-shadow:0 10px 28px rgba(15,23,42,.08)}
+    .feature i{margin-bottom:30px;color:var(--blue);font-size:43px}
+    .feature .number{float:right;color:#cbd5e1;font:700 36px 'Poppins',sans-serif}
+    .feature h3{font-size:25px}
+    .feature p{color:var(--muted)}
+    .architecture{margin-top:56px}
+    .pipeline{display:grid;grid-template-columns:1fr 56px 1.2fr 56px 1.1fr 56px 1.1fr;align-items:center}
+    .pipe-node{display:flex;min-height:165px;align-items:center;justify-content:center;flex-direction:column;padding:24px;text-align:center;background:#fff;border-top:6px solid var(--blue);box-shadow:0 9px 24px rgba(15,23,42,.08)}
+    .pipe-node i{margin-bottom:17px;color:var(--blue);font-size:32px}
+    .pipe-node b{font:600 18px 'Poppins',sans-serif;line-height:1.3}
+    .pipe-node span{margin-top:8px;color:var(--muted);font-size:13px}
+    .arrow{color:var(--cyan);font-size:28px;text-align:center}
+    .architecture-note{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px}
+    .architecture-note div{padding:14px 18px;background:#eaf6fc;color:#334155;font-size:14px}
+    .stack-table{width:100%;margin-top:44px;border-collapse:collapse;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.08)}
+    .stack-table th{padding:18px 22px;background:var(--navy);color:#fff;text-align:left;font:600 16px 'Poppins',sans-serif}
+    .stack-table td{padding:20px 22px;border-bottom:1px solid #e2e8f0;font-size:16px;vertical-align:top}
+    .stack-table tr:last-child td{border-bottom:0}
+    .stack-table td:first-child{width:21%;color:var(--blue);font-weight:700}
+    .stack-table td:nth-child(2){width:34%;font-weight:600}
+    .stack-table td:nth-child(3){color:var(--muted)}
+    .stack-table i{width:24px;color:var(--blue)}
+    .timeline{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:70px;margin-top:105px}
+    .timeline:before{content:'';position:absolute;left:9%;right:9%;top:35px;height:4px;background:#bae6fd}
+    .road-step{position:relative;text-align:center}
+    .step-dot{position:relative;z-index:1;display:grid;place-items:center;width:72px;height:72px;margin:0 auto 28px;border:7px solid #e0f2fe;border-radius:50%;background:var(--blue);color:#fff;font:700 18px 'Poppins',sans-serif}
+    .road-step h3{font-size:22px}
+    .road-step p{color:var(--muted);font-size:16px}
+    .closing{display:flex;align-items:center;justify-content:center;text-align:center}
+    .closing .slide-inner{position:relative;z-index:1;height:auto;width:100%}
+    .closing h1{margin-bottom:18px;font-size:64px}
+    .closing p{color:#d7e8f5;font-size:22px}
+    .thanks{display:inline-flex;align-items:center;gap:12px;margin-top:50px;padding:15px 24px;border:1px solid rgba(186,230,253,.4);background:rgba(2,132,199,.16);color:#e0f2fe;font-size:15px}
+    .closing-mark{display:grid;place-items:center;width:78px;height:78px;margin:0 auto 30px;border:2px solid #38bdf8;border-radius:20px;color:#7dd3fc;font-size:35px}
+    @media print{html,body{background:#fff}body{padding:0}.deck{display:block}.slide-container{page-break-after:always;box-shadow:none}}
+  </style>
+</head>
+<body>
+<main class="deck">
+  <section class="slide-container dark" data-slide="01 / 10">
+    <div class="slide-inner">
+      <div class="badge"><i class="fa-solid fa-shield-halved"></i> PLANGUARD PROJECT</div>
+      <h1 style="margin:68px 0 22px">PlanGuard</h1>
+      <p class="subtitle">The proactive planning &amp; guard system that protects your workflow: monitoring risks, optimizing plans, and preventing costly failures.</p>
+      <div class="presenters"><b>Presented by</b>[Insert Presenter Names / Team Members]</div>
+      <div class="decor-grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="slide-container" data-slide="02 / 10">
+    <div class="slide-inner">
+      <div class="eyebrow">The people behind the platform</div><h2>Meet the team</h2><div class="slide-rule"></div>
+      <div class="three-grid">
+        <article class="tile"><div class="icon"><i class="fa-solid fa-server"></i></div><h3>Member 1: [Name]</h3><p>[School / Role]</p><span class="role">Backend / Infrastructure</span></article>
+        <article class="tile"><div class="icon"><i class="fa-solid fa-shield"></i></div><h3>Member 2: [Name]</h3><p>[School / Role]</p><span class="role">Algorithms &amp; Security Engine</span></article>
+        <article class="tile"><div class="icon"><i class="fa-solid fa-pen-ruler"></i></div><h3>Member 3: [Name]</h3><p>[School / Role]</p><span class="role">Frontend &amp; UI/UX Design</span></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-container" data-slide="03 / 10">
+    <div class="slide-inner">
+      <div class="eyebrow">Why this matters</div><h2>Reactive planning is expensive</h2><div class="slide-rule"></div>
+      <div class="problem-grid">
+        <div class="metrics">
+          <div class="metric"><strong>68%</strong><span>frequency of unexpected project and workflow disruptions</span></div>
+          <div class="metric"><strong>20+ hrs</strong><span>lost each week to reactive troubleshooting and mitigation</span></div>
+          <div class="metric"><strong>3.5×</strong><span>potential reduction in risk exposure through proactive guarding</span></div>
+        </div>
+        <div class="problem-copy"><h3>Conventional tools document the damage. They rarely prevent it.</h3><ul class="check-list"><li>Planning friction grows as projects, dependencies, and owners multiply.</li><li>Manual status tracking creates burnout without producing timely insight.</li><li>Static dashboards lack real-time warning and calibrated fallback mechanisms.</li></ul></div>
+      </div>
+      <small class="source-note">Pitch framing metrics supplied in the project brief; validate against primary research before external publication.</small>
+    </div>
+  </section>
+
+  <section class="slide-container" data-slide="04 / 10">
+    <div class="slide-inner">
+      <div class="eyebrow">The market gap</div><h2>Existing approaches stop short</h2><div class="slide-rule"></div>
+      <div class="compare-grid">
+        <article class="compare"><div class="compare-head"><i class="fa-solid fa-chart-column"></i><h3>Commercial tools &amp;<br>legacy dashboards</h3></div><ul><li>Static reporting after disruption occurs</li><li>No real-time anomaly detection</li><li>Complex setup and heavy manual entry</li><li>Disconnected alerts and mitigation workflows</li></ul></article>
+        <article class="compare"><div class="compare-head"><i class="fa-solid fa-terminal"></i><h3>Early prototype /<br>v1 CLI</h3></div><ul><li>Limited monitoring scope</li><li>Command-line interface only</li><li>Single-rule caps constrain adaptation</li><li>Uncalibrated LLM outputs without live verification</li></ul></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-container solution" data-slide="05 / 10">
+    <div class="solution-visual" aria-hidden="true"><div class="flow-nodes"></div></div>
+    <div class="solution-copy"><span class="solution-label"><i class="fa-solid fa-route"></i> The bridge from signal to action</span><h2>Introducing PlanGuard</h2><p>PlanGuard bridges proactive monitoring and automated mitigation—connecting real-time risk evaluation with continuous workflow optimization to keep operations moving smoothly.</p></div>
+  </section>
+
+  <section class="slide-container" data-slide="06 / 10">
+    <div class="slide-inner">
+      <div class="eyebrow">Core capabilities</div><h2>Guardrails that adapt to the work</h2><div class="slide-rule"></div>
+      <div class="feature-grid">
+        <article class="feature"><span class="number">01</span><i class="fa-solid fa-sliders"></i><h3>Personalized Risk Policies</h3><p>Customizable rule engines align monitoring with each user’s risk tolerance, workflow specifications, and operational priorities.</p></article>
+        <article class="feature"><span class="number">02</span><i class="fa-solid fa-route"></i><h3>Optimized Mitigation Routes</h3><p>Ranking algorithms evaluate fallbacks and resolve conflicts dynamically before disruptions become costly failures.</p></article>
+        <article class="feature"><span class="number">03</span><i class="fa-solid fa-gauge-high"></i><h3>Interactive Guard Dashboard</h3><p>Real-time monitoring, instant alerts, live metrics, and visual status feeds create one clear operational picture.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-container" data-slide="07 / 10">
+    <div class="slide-inner">
+      <div class="eyebrow">System design</div><h2>Architecture &amp; data flow</h2><div class="slide-rule"></div>
+      <div class="architecture">
+        <div class="pipeline">
+          <div class="pipe-node"><i class="fa-solid fa-cloud-arrow-down"></i><b>API / Data<br>Ingestion</b><span>Events, plans, signals</span></div><div class="arrow"><i class="fa-solid fa-arrow-right"></i></div>
+          <div class="pipe-node"><i class="fa-solid fa-magnifying-glass-chart"></i><b>Risk &amp; Permutation<br>Search Engine</b><span>Detect and enumerate paths</span></div><div class="arrow"><i class="fa-solid fa-arrow-right"></i></div>
+          <div class="pipe-node"><i class="fa-solid fa-scale-balanced"></i><b>Weighted<br>Scoring Model</b><span>Rank risk and fit</span></div><div class="arrow"><i class="fa-solid fa-arrow-right"></i></div>
+          <div class="pipe-node"><i class="fa-solid fa-bell"></i><b>Notification &amp;<br>Caching Layer</b><span>Alert, retry, recover</span></div>
+        </div>
+        <div class="architecture-note"><div><b>Continuous:</b> every new signal can trigger re-evaluation.</div><div><b>Explainable:</b> weighted factors expose why a route ranks first.</div><div><b>Resilient:</b> cached state protects continuity during API failure.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-container" data-slide="08 / 10">
+    <div class="slide-inner">
+      <div class="eyebrow">Implementation</div><h2>Technology stack</h2><div class="slide-rule"></div>
+      <table class="stack-table">
+        <thead><tr><th>Layer</th><th>Technologies</th><th>Key responsibilities</th></tr></thead>
+        <tbody>
+          <tr><td><i class="fa-solid fa-display"></i>Frontend</td><td>React, HTML5/CSS3,<br>Tailwind / JavaScript</td><td>Interactive dashboard, accessible controls, responsive monitoring views</td></tr>
+          <tr><td><i class="fa-solid fa-gears"></i>Backend</td><td>Python, Flask / FastAPI,<br>unittest</td><td>Rules, orchestration, authentication, service endpoints, automated verification</td></tr>
+          <tr><td><i class="fa-solid fa-database"></i>Database &amp; caching</td><td>SQLAlchemy / PostgreSQL / Redis</td><td>Persistent plans, event history, ranked state, cached recovery</td></tr>
+          <tr><td><i class="fa-solid fa-plug"></i>APIs &amp; integrations</td><td>AI Engine, Monitoring APIs,<br>Live Alert Webhooks</td><td>External signals, intelligence, notifications, mitigation triggers</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="slide-container" data-slide="09 / 10">
+    <div class="slide-inner">
+      <div class="eyebrow">What comes next</div><h2>Future roadmap</h2><div class="slide-rule"></div>
+      <div class="timeline">
+        <article class="road-step"><div class="step-dot">01</div><h3>Team Collaboration</h3><p>Multi-tenant workspaces and role-based access control.</p></article>
+        <article class="road-step"><div class="step-dot">02</div><h3>Webhook Ecosystem</h3><p>Automated integrations for Slack, Teams, and PagerDuty.</p></article>
+        <article class="road-step"><div class="step-dot">03</div><h3>Predictive Intelligence</h3><p>AI anomaly models with integrated cost and impact tracking.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-container dark closing" data-slide="10 / 10">
+    <div class="slide-inner">
+      <div class="closing-mark"><i class="fa-solid fa-comments"></i></div>
+      <div class="eyebrow" style="justify-content:center">Plan with confidence. Guard what matters.</div>
+      <h1>Questions &amp; Discussion</h1>
+      <p>Thank you for listening! We welcome your feedback.</p>
+      <div class="thanks"><i class="fa-solid fa-heart"></i> Special thanks to our engineering mentors and project supporters.</div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
