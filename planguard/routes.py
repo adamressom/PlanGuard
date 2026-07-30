@@ -6,19 +6,34 @@ from flask import Blueprint, abort, current_app, flash, g, jsonify, redirect, re
 
 from . import db
 from .auth import api_login_required, login_required
-from .models import Assignment, AvailabilityOverride, FocusSession, IntegrationState, ScheduledFocusBlock, WeeklyAvailability
+from .models import Assignment, AvailabilityOverride, FocusSession, IntegrationState, NotionImportSource, ScheduledFocusBlock, WeeklyAvailability
+from .integrations.notion import (
+    NOTION_PROVIDER,
+    MAPPING_TYPES,
+    NotionProviderError,
+    default_mapping,
+    import_prepared,
+    list_sources,
+    notion_access_token,
+    notion_client,
+    notion_integration_for_user,
+    prepare_import,
+    schema_for_source,
+    store_notion_tokens,
+    validate_mapping,
+)
 from .services.calendar import (
     CalendarProviderError,
     GOOGLE_PROVIDER,
     GOOGLE_SCOPES,
-    cache_busy_periods,
     calendar_conflicts_for_user,
     calendar_status_for_user,
-    demo_busy_periods,
     google_integration_for_user,
     oauth_client,
     store_token_response,
+    sync_google_calendar as run_calendar_sync,
 )
+from .services.dashboard import dashboard_state
 from .services.assignments import create_assignment, remove_assignment, set_assignment_status, update_assignment as save_assignment_updates
 from .services.focus import FocusStateError, active_focus_for_user, end_focus_session, focus_payload, pause_focus_session, recent_focus_history, resume_focus_session, start_focus_session
 from .services.ownership import get_owned_record, owned_records
@@ -41,17 +56,43 @@ def assignment_payload(assignment):
         "completed": assignment.completed,
         "notes": assignment.notes,
         "provider_id": assignment.provider_id,
+        "provider": assignment.provider,
     }
 
 
 def integration_payload(integration):
+    last_successful_at = integration.last_synced_at
+    if integration.provider == NOTION_PROVIDER and integration.notion_source:
+        last_successful_at = integration.notion_source.last_imported_at or last_successful_at
+    if integration.status == "disconnected":
+        display_status, next_action = "Disconnected", "Connect"
+    elif integration.status == "connecting":
+        display_status, next_action = "Connecting", "Complete connection"
+    elif integration.status == "expired":
+        display_status, next_action = "Reconnect required", "Reconnect"
+    elif integration.sync_status == "syncing":
+        display_status, next_action = "Syncing", "Wait"
+    elif integration.sync_status == "live":
+        display_status, next_action = "Synced", "Sync again"
+    elif integration.sync_status == "cached":
+        display_status, next_action = "Using cached data", "Retry sync"
+    elif integration.sync_status == "error" or integration.status == "error":
+        display_status, next_action = "Error", "Retry or reconnect"
+    else:
+        display_status = "Connected"
+        next_action = "Choose source" if integration.provider == NOTION_PROVIDER else "Sync calendar"
     return {
         "id": integration.id,
         "provider": integration.provider,
         "mode": integration.mode,
         "status": integration.status,
         "last_synced_at": integration.last_synced_at.isoformat() if integration.last_synced_at else None,
+        "last_sync_attempt_at": integration.last_sync_attempt_at.isoformat() if integration.last_sync_attempt_at else None,
+        "sync_status": integration.sync_status,
         "retry_count": integration.retry_count,
+        "display_status": display_status,
+        "next_action": next_action,
+        "last_successful_sync_at": last_successful_at.isoformat() if last_successful_at else None,
     }
 
 
@@ -129,6 +170,16 @@ def dashboard():
             g.user.available_study_minutes,
             50,
         ))
+    notion_integration = notion_integration_for_user(g.user.id)
+    calendar_status = calendar_status_for_user(g.user.id)
+    state = dashboard_state(
+        active_assignments,
+        completed_assignments,
+        focus_history,
+        upcoming_blocks,
+        calendar_status,
+        notion_integration,
+    )
     return render_template(
         "dashboard.html",
         assignments=active_assignments,
@@ -140,7 +191,10 @@ def dashboard():
         recommended_focus_minutes=recommended_focus_minutes,
         focus_history=[focus_payload(item) for item in focus_history],
         upcoming_blocks=upcoming_blocks,
-        calendar_status=calendar_status_for_user(g.user.id),
+        calendar_status=calendar_status,
+        dashboard_state=state,
+        notion_integration=notion_integration,
+        notion_mode=notion_integration.mode if notion_integration and notion_integration.mode else current_app.config["NOTION_MODE"],
     )
 
 
@@ -267,8 +321,8 @@ def google_calendar_demo_callback():
     integration.mode = "demo"
     integration.status = "connected"
     integration.connected_at = datetime.now(timezone.utc)
-    cache_busy_periods(integration, demo_busy_periods(datetime.now(timezone.utc).date(), 14))
     db.session.commit()
+    run_calendar_sync(integration, sleeper=lambda _delay: None, jitter=lambda: 0)
     flash("Demo calendar connected. No Google account data was accessed.", "success")
     return redirect(url_for("main.dashboard"))
 
@@ -322,12 +376,20 @@ def sync_google_calendar():
     if integration is None or integration.status != "connected":
         flash("Connect a calendar before syncing.", "error")
         return redirect(url_for("main.dashboard"))
-    if integration.mode == "demo":
-        cache_busy_periods(integration, demo_busy_periods(datetime.now(timezone.utc).date(), 14))
-        db.session.commit()
-        flash("Demo calendar availability updated.", "success")
+    result = run_calendar_sync(integration)
+    if result.ok:
+        flash(
+            "Demo calendar availability updated."
+            if integration.mode == "demo"
+            else "Google Calendar data updated.",
+            "success",
+        )
+    elif result.source == "cache":
+        flash("Google is unavailable. PlanGuard is using your last synced calendar availability.", "error")
+    elif integration.status == "expired":
+        flash("Your Google Calendar connection expired. Please reconnect.", "error")
     else:
-        flash("Live calendar event retrieval is not enabled in this demo build.", "error")
+        flash("Google Calendar data could not be updated, and no usable cache is available.", "error")
     return redirect(url_for("main.dashboard"))
 
 
@@ -357,6 +419,8 @@ def disconnect_google_calendar():
         integration.granted_scopes = None
         integration.cached_payload = None
         integration.last_synced_at = None
+        integration.last_sync_attempt_at = None
+        integration.sync_status = "never"
         integration.last_error_code = None
         integration.retry_count = 0
         db.session.commit()
@@ -364,6 +428,254 @@ def disconnect_google_calendar():
         flash("Calendar disconnected locally, but Google could not be reached to confirm revocation.", "success")
     else:
         flash("Calendar disconnected.", "success")
+    return redirect(url_for("main.dashboard"))
+
+
+def _begin_notion_oauth_attempt():
+    state = secrets.token_urlsafe(32)
+    session["notion_oauth_attempt"] = {
+        "state": state,
+        "user_id": g.user.id,
+        "provider": NOTION_PROVIDER,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return state
+
+
+def _consume_notion_oauth_attempt(returned_state):
+    attempt = session.pop("notion_oauth_attempt", None)
+    if not attempt or not returned_state:
+        return False
+    try:
+        return (
+            attempt["user_id"] == g.user.id
+            and attempt["provider"] == NOTION_PROVIDER
+            and datetime.now(timezone.utc) - datetime.fromisoformat(attempt["created_at"]) <= timedelta(minutes=10)
+            and hmac.compare_digest(attempt["state"], returned_state)
+        )
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+@main.post("/integrations/notion/connect")
+@login_required
+def connect_notion():
+    mode = current_app.config["NOTION_MODE"]
+    if mode == "disabled":
+        flash("Notion integration is unavailable.", "error")
+        return redirect(url_for("main.dashboard"))
+    if mode == "live" and not current_app.config["NOTION_OAUTH_CONFIGURED"]:
+        flash("Notion live connection is not configured.", "error")
+        return redirect(url_for("main.dashboard"))
+    integration = notion_integration_for_user(g.user.id, create=True)
+    if integration.status == "connected" and request.form.get("reconnect") != "1":
+        return redirect(url_for("main.notion_sources"))
+    state = _begin_notion_oauth_attempt()
+    integration.mode = mode
+    integration.status = "connecting"
+    integration.last_error_code = None
+    db.session.commit()
+    if mode == "demo":
+        return redirect(url_for("main.notion_demo_consent"))
+    return redirect(notion_client().build_authorization_url(state))
+
+
+@main.get("/integrations/notion/demo-consent")
+@login_required
+def notion_demo_consent():
+    attempt = session.get("notion_oauth_attempt")
+    if not attempt or attempt.get("user_id") != g.user.id:
+        flash("That Notion demo connection attempt expired. Please try again.", "error")
+        return redirect(url_for("main.dashboard"))
+    return render_template("notion_demo_consent.html", state=attempt["state"])
+
+
+@main.post("/integrations/notion/demo-callback")
+@login_required
+def notion_demo_callback():
+    integration = notion_integration_for_user(g.user.id, create=True)
+    if not _consume_notion_oauth_attempt(request.form.get("state")):
+        if integration.status != "connected":
+            integration.status = "disconnected"
+        integration.last_error_code = "oauth_state_invalid"
+        db.session.commit()
+        return render_template("notion_oauth_error.html"), 400
+    if request.form.get("decision") != "approve":
+        integration.status = "disconnected"
+        integration.mode = None
+        db.session.commit()
+        flash("Demo Notion workspace was not connected.", "success")
+        return redirect(url_for("main.dashboard"))
+    integration.mode = "demo"
+    integration.status = "connected"
+    integration.connected_at = datetime.now(timezone.utc)
+    integration.cached_payload = {"workspace_id": "demo-workspace", "workspace_name": "Demo workspace"}
+    db.session.commit()
+    flash("Demo Notion workspace connected. No Notion account data was accessed.", "success")
+    return redirect(url_for("main.notion_sources"))
+
+
+@main.get("/integrations/notion/callback")
+@login_required
+def notion_callback():
+    integration = notion_integration_for_user(g.user.id, create=True)
+    if not _consume_notion_oauth_attempt(request.args.get("state")):
+        if integration.status != "connected":
+            integration.status = "disconnected"
+        integration.last_error_code = "oauth_state_invalid"
+        db.session.commit()
+        return render_template("notion_oauth_error.html"), 400
+    if request.args.get("error"):
+        integration.status = "disconnected"
+        integration.last_error_code = "access_denied" if request.args["error"] == "access_denied" else "provider_error"
+        db.session.commit()
+        flash("Notion was not connected.", "success" if request.args["error"] == "access_denied" else "error")
+        return redirect(url_for("main.dashboard"))
+    code = request.args.get("code")
+    if not code:
+        integration.status = "error"
+        integration.last_error_code = "authorization_code_missing"
+        db.session.commit()
+        return render_template("notion_oauth_error.html"), 400
+    try:
+        store_notion_tokens(integration, notion_client().exchange_code(code))
+        integration.mode = "live"
+        integration.status = "connected"
+        integration.connected_at = datetime.now(timezone.utc)
+        integration.last_error_code = None
+        db.session.commit()
+    except NotionProviderError as exc:
+        db.session.rollback()
+        integration = notion_integration_for_user(g.user.id, create=True)
+        integration.status = "error"
+        integration.last_error_code = exc.code
+        db.session.commit()
+        flash("Notion couldn’t complete the connection. Please try again.", "error")
+        return redirect(url_for("main.dashboard"))
+    flash("Notion connected.", "success")
+    return redirect(url_for("main.notion_sources"))
+
+
+def _owned_notion_source():
+    integration = notion_integration_for_user(g.user.id)
+    return integration.notion_source if integration and integration.status == "connected" else None
+
+
+@main.route("/integrations/notion/sources", methods=("GET", "POST"))
+@login_required
+def notion_sources():
+    integration = notion_integration_for_user(g.user.id)
+    if integration is None or integration.status != "connected":
+        flash("Connect Notion before choosing a source.", "error")
+        return redirect(url_for("main.dashboard"))
+    try:
+        sources = list_sources(integration)
+    except NotionProviderError:
+        flash("PlanGuard couldn’t load your Notion sources. Check that they were shared with the connection.", "error")
+        sources = []
+    if request.method == "POST":
+        source_id = request.form.get("source_id", "")
+        if source_id not in {item["id"] for item in sources}:
+            flash("Choose an available Notion source.", "error")
+            return redirect(url_for("main.notion_sources"))
+        try:
+            name, schema = schema_for_source(integration, source_id)
+        except NotionProviderError:
+            flash("PlanGuard couldn’t read that Notion source.", "error")
+            return redirect(url_for("main.notion_sources"))
+        source = integration.notion_source
+        if source is None:
+            source = NotionImportSource(
+                integration=integration,
+                data_source_id=source_id,
+                source_name=name,
+            )
+            db.session.add(source)
+        source.data_source_id = source_id
+        source.source_name = name
+        source.property_schema = schema
+        source.property_mapping = default_mapping(schema)
+        source.selected_at = datetime.now(timezone.utc)
+        db.session.commit()
+        flash(f'"{name}" selected for assignment imports.', "success")
+        return redirect(url_for("main.notion_mapping"))
+    return render_template(
+        "notion_sources.html",
+        sources=sources,
+        selected=integration.notion_source,
+        notion_mode=integration.mode,
+    )
+
+
+@main.route("/integrations/notion/mapping", methods=("GET", "POST"))
+@login_required
+def notion_mapping():
+    source = _owned_notion_source()
+    if source is None:
+        flash("Choose a Notion source first.", "error")
+        return redirect(url_for("main.notion_sources"))
+    errors = {}
+    prepared = None
+    mapping = source.property_mapping or default_mapping(source.property_schema)
+    if request.method == "POST":
+        mapping, errors = validate_mapping(source.property_schema, request.form)
+        if not errors:
+            source.property_mapping = mapping
+            if request.form.get("action") == "import":
+                source.integration.sync_status = "syncing"
+                source.integration.last_sync_attempt_at = datetime.now(timezone.utc)
+                source.integration.last_error_code = None
+            db.session.commit()
+            try:
+                prepared = prepare_import(g.user.id, source)
+            except NotionProviderError as exc:
+                if request.form.get("action") == "import":
+                    source.integration.sync_status = "error"
+                    source.integration.last_error_code = exc.code
+                    db.session.commit()
+                flash("PlanGuard couldn’t read assignments from Notion. Please try again.", "error")
+                return redirect(url_for("main.notion_mapping"))
+            if request.form.get("action") == "import":
+                summary = import_prepared(g.user.id, source, prepared)
+                flash(
+                    f"Imported {summary['imported']} assignments; "
+                    f"{summary['already_imported']} already imported; "
+                    f"{summary['skipped']} skipped.",
+                    "success",
+                )
+                return redirect(url_for("main.dashboard"))
+    return render_template(
+        "notion_mapping.html",
+        source=source,
+        mapping=mapping,
+        errors=errors,
+        prepared=prepared,
+        mapping_types=MAPPING_TYPES,
+    ), 400 if errors else 200
+
+
+@main.post("/integrations/notion/disconnect")
+@login_required
+def disconnect_notion():
+    session.pop("notion_oauth_attempt", None)
+    integration = notion_integration_for_user(g.user.id)
+    if integration:
+        if integration.mode == "live" and integration.credential:
+            try:
+                token = notion_access_token(integration)
+                notion_client().revoke_token(token)
+            except NotionProviderError:
+                pass
+            db.session.delete(integration.credential)
+        if integration.notion_source:
+            db.session.delete(integration.notion_source)
+        integration.mode = None
+        integration.status = "disconnected"
+        integration.provider_account_id = None
+        integration.cached_payload = None
+        integration.last_error_code = None
+        db.session.commit()
+    flash("Notion disconnected.", "success")
     return redirect(url_for("main.dashboard"))
 
 
@@ -880,19 +1192,42 @@ def integration_api_detail(integration_id):
     return jsonify(integration_payload(integration)) if integration else api_not_found()
 
 
+@main.get("/api/integrations/<provider>/status")
+@api_login_required
+def integration_provider_status(provider):
+    if provider not in {GOOGLE_PROVIDER, NOTION_PROVIDER}:
+        return api_not_found()
+    integration = db.session.scalar(
+        owned_records(IntegrationState).where(IntegrationState.provider == provider)
+    )
+    if integration:
+        return jsonify(integration_payload(integration))
+    mode = (
+        current_app.config["GOOGLE_CALENDAR_MODE"]
+        if provider == GOOGLE_PROVIDER
+        else current_app.config["NOTION_MODE"]
+    )
+    return jsonify(
+        provider=provider,
+        mode=mode,
+        status="disconnected",
+        sync_status="never",
+        display_status="Disconnected",
+        next_action="Connect",
+        last_synced_at=None,
+        last_successful_sync_at=None,
+        last_sync_attempt_at=None,
+        retry_count=0,
+    )
+
+
 @main.patch("/api/integrations/<int:integration_id>")
 @api_login_required
 def update_integration(integration_id):
     integration = get_owned_record(IntegrationState, integration_id)
     if integration is None:
         return api_not_found()
-    data = request.get_json(silent=True) or {}
-    allowed_statuses = {"connected", "disconnected", "error"}
-    if data.get("status") not in allowed_statuses:
-        return jsonify(error="Status must be connected, disconnected, or error."), 400
-    integration.status = data["status"]
-    db.session.commit()
-    return jsonify(integration_payload(integration))
+    return jsonify(error="Integration status is managed by connect, sync, import, and disconnect actions."), 405
 
 
 @main.delete("/api/integrations/<int:integration_id>")
@@ -901,9 +1236,7 @@ def delete_integration(integration_id):
     integration = get_owned_record(IntegrationState, integration_id)
     if integration is None:
         return api_not_found()
-    db.session.delete(integration)
-    db.session.commit()
-    return "", 204
+    return jsonify(error="Use the provider disconnect action so credentials are revoked safely."), 405
 
 
 @main.get("/api/health")

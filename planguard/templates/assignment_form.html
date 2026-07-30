@@ -9,6 +9,7 @@
     <p>{% if mode == 'edit' %}Changes will immediately reshape your priority queue.{% else %}Every factor helps the priority engine decide what deserves your attention first.{% endif %}</p>
   </div>
   <form class="panel assignment-form" method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-section-title"><span>01</span><div><b>The work</b><small>What needs to get done?</small></div></div>
     <div class="field-grid two">
       <div class="field"><label for="title">Assignment title</label><input id="title" name="title" maxlength="180" value="{{ form_data.get('title', '') }}" required>{% if errors.title %}<span class="field-error">{{ errors.title }}</span>{% endif %}</div>

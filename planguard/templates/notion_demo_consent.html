@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Connect demo Notion — PlanGuard{% endblock %}
+{% block content %}
+<section class="auth-wrap shell">
+  <div class="auth-card">
+    <span class="kicker">Demo connection</span>
+    <h1>Show assignment imports.</h1>
+    <p>No Notion account or workspace data will be accessed. PlanGuard will provide a simulated Coursework source for mapping, preview, and import.</p>
+    <form method="post" action="{{ url_for('main.notion_demo_callback') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="state" value="{{ state }}">
+      <div class="auth-actions">
+        <button class="button" type="submit" name="decision" value="approve">Connect demo Notion</button>
+        <button class="button ghost" type="submit" name="decision" value="cancel">Cancel</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

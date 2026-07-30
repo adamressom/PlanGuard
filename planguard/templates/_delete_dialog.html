@@ -1,11 +1,11 @@
-<dialog class="delete-dialog" id="delete-assignment-dialog" aria-labelledby="delete-dialog-title">
+<dialog class="delete-dialog" id="delete-assignment-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description">
   <button class="dialog-x" type="button" data-delete-close aria-label="Cancel deletion">×</button>
   <div class="danger-icon" aria-hidden="true">!</div>
   <span class="kicker danger-kicker">Remove assignment</span>
   <h2 id="delete-dialog-title">Delete <span data-delete-name>this assignment</span>?</h2>
-  <p>This removes it from your priority queue and cannot be undone.</p>
+  <p id="delete-dialog-description">This removes it from your priority queue and cannot be undone.</p>
   <div class="delete-actions">
     <button class="cancel-button" type="button" data-delete-close>Keep assignment</button>
-    <form method="post" data-delete-form><button class="danger-button" type="submit">Yes, delete it</button></form>
+    <form method="post" data-delete-form><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="danger-button" type="submit">Yes, delete it</button></form>
   </div>
 </dialog>

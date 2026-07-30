@@ -2,11 +2,11 @@ import re
 from functools import wraps
 from urllib.parse import urlsplit
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import db
+from . import db, limiter
 from .models import User
 
 auth = Blueprint("auth", __name__)
@@ -65,6 +65,7 @@ def validate_registration(email, display_name, password):
 
 
 @auth.route("/register", methods=("GET", "POST"))
+@limiter.limit(lambda: current_app.config["AUTH_RATE_LIMIT"], methods=["POST"])
 def register():
     if g.user is not None:
         return redirect(url_for("main.dashboard"))
@@ -101,6 +102,7 @@ def register():
 
 
 @auth.route("/login", methods=("GET", "POST"))
+@limiter.limit(lambda: current_app.config["AUTH_RATE_LIMIT"], methods=["POST"])
 def login():
     if g.user is not None:
         return redirect(url_for("main.dashboard"))

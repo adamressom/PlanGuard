@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Map {{ source.source_name }} — PlanGuard{% endblock %}
+{% block content %}
+<section class="dashboard shell schedule-page">
+  <div class="dash-heading"><div><span class="kicker">Notion mapping</span><h1>Map {{ source.source_name }}.</h1></div><a class="text-link" href="{{ url_for('main.notion_sources') }}">Change source</a></div>
+  <div class="schedule-grid">
+    <section class="panel">
+      <div class="panel-title"><div><span>PROPERTIES</span><h2>Assignment fields</h2></div></div>
+      <form class="schedule-form" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% for field, label in (
+          ('title', 'Title *'), ('deadline', 'Deadline *'), ('course', 'Course'),
+          ('difficulty', 'Difficulty'), ('estimated_minutes', 'Estimated minutes'),
+          ('course_weight', 'Course impact'), ('progress', 'Progress'),
+          ('completed', 'Completed'), ('notes', 'Notes')
+        ) %}
+        <label>{{ label }}
+          <select name="{{ field }}" {% if field in ('title', 'deadline') %}required{% endif %}>
+            <option value="">Use PlanGuard default</option>
+            {% for name, property in source.property_schema.items() %}
+              {% if property.type in mapping_types[field] %}<option value="{{ name }}" {% if mapping.get(field) == name %}selected{% endif %}>{{ name }} ({{ property.type }})</option>{% endif %}
+            {% endfor %}
+          </select>
+          {% if errors.get(field) %}<span class="field-error">{{ errors[field] }}</span>{% endif %}
+        </label>
+        {% endfor %}
+        <button class="button" type="submit" name="action" value="preview">Preview import</button>
+      </form>
+    </section>
+    <section class="panel">
+      <div class="panel-title"><div><span>PREVIEW</span><h2>Import summary</h2></div></div>
+      {% if prepared %}
+      <div class="schedule-list">
+        <article class="schedule-row"><b>Ready to import</b><span>{{ prepared.ready|length }}</span></article>
+        <article class="schedule-row"><b>Already imported</b><span>{{ prepared.duplicates|length }}</span></article>
+        <article class="schedule-row"><b>Skipped with errors</b><span>{{ prepared.skipped|length }}</span></article>
+      </div>
+      {% for item in prepared.ready %}<article class="schedule-row"><b>{{ item.title }}</b><span>{{ item.course }} · {{ item.deadline.strftime('%Y-%m-%d') }}</span>{% if item.warnings %}<small>{{ item.warnings|join(', ') }}</small>{% endif %}</article>{% endfor %}
+      {% for item in prepared.skipped %}<article class="schedule-row"><b>{{ item.title or 'Untitled Notion row' }}</b><small>{{ item.errors|join(', ') }}</small></article>{% endfor %}
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% for field, value in mapping.items() %}<input type="hidden" name="{{ field }}" value="{{ value }}">{% endfor %}
+        <button class="button" type="submit" name="action" value="import" {% if not prepared.ready %}disabled{% endif %}>Import {{ prepared.ready|length }} assignments</button>
+      </form>
+      {% else %}
+      <p class="schedule-empty">Map the required properties and preview the rows before importing.</p>
+      {% endif %}
+    </section>
+  </div>
+</section>
+{% endblock %}

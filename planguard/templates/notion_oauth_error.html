@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Notion connection error — PlanGuard{% endblock %}
+{% block content %}
+<section class="auth-wrap shell"><div class="auth-card">
+  <span class="kicker">Connection not completed</span>
+  <h1>We couldn’t verify this Notion connection.</h1>
+  <p>The request may have expired or already been used. Return to the dashboard and try again.</p>
+  <a class="button" href="{{ url_for('main.dashboard') }}">Return to dashboard</a>
+</div></section>
+{% endblock %}

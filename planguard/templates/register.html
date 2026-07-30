@@ -13,6 +13,7 @@
     <h2>Create your account</h2>
     <p class="auth-subtitle">Three fields. One much calmer semester.</p>
     <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label for="display_name">Display name</label>
       <input id="display_name" name="display_name" autocomplete="name" maxlength="120" value="{{ form_data.display_name }}" aria-describedby="display-name-error" required>
       {% if errors.display_name %}<span class="field-error" id="display-name-error">{{ errors.display_name }}</span>{% endif %}
