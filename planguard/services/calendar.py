@@ -299,7 +299,7 @@ def store_token_response(integration, payload):
     return credential
 
 
-def valid_access_token(integration, force_refresh=False):
+def valid_access_token(integration, force_refresh=False, now=None):
     credential = integration.credential
     if credential is None or not credential.encrypted_refresh_token:
         integration.status = "expired"
@@ -307,8 +307,9 @@ def valid_access_token(integration, force_refresh=False):
         db.session.commit()
         raise CalendarProviderError("refresh_token_missing")
     expires_at = aware_datetime(credential.access_token_expires_at)
+    reference_time = aware_datetime(now or datetime.now(timezone.utc))
     if not force_refresh and credential.encrypted_access_token and expires_at:
-        if expires_at > datetime.now(timezone.utc) + REFRESH_BUFFER:
+        if expires_at > reference_time + REFRESH_BUFFER:
             return decrypt_token(credential.encrypted_access_token)
     try:
         payload = oauth_client().refresh_access_token(decrypt_token(credential.encrypted_refresh_token))
@@ -566,7 +567,7 @@ def sync_google_calendar(integration, now=None, sleeper=None, jitter=None):
 
     retry_counter = [0]
     try:
-        access_token = valid_access_token(integration)
+        access_token = valid_access_token(integration, now=now)
         client = calendar_api_client()
         try:
             calendars = _selected_calendars(client, access_token, retry_counter, sleeper, jitter)
@@ -585,7 +586,7 @@ def sync_google_calendar(integration, now=None, sleeper=None, jitter=None):
         except CalendarProviderError as exc:
             if exc.code != "authentication_failed":
                 raise
-            access_token = valid_access_token(integration, force_refresh=True)
+            access_token = valid_access_token(integration, force_refresh=True, now=now)
             calendars = _selected_calendars(client, access_token, retry_counter, sleeper, jitter)
             periods = []
             for calendar in calendars:

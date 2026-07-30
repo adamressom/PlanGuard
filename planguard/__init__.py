@@ -150,5 +150,19 @@ def create_app(test_config=None):
         with app.app_context():
             db.create_all()
             apply_schema_updates()
+    elif app.config.get("ENVIRONMENT") == "development":
+        # Developers often already have a SQLite database from an earlier
+        # branch. Create any newly introduced tables first, then add columns
+        # that create_all() cannot retrofit onto existing tables. Both
+        # operations are additive and preserve existing local records. This
+        # is deliberately limited to development; deployed environments must
+        # continue to use `flask db upgrade`.
+        with app.app_context():
+            # Leave a truly empty database to Flask-Migrate. An older local
+            # database, however, needs newly pulled tables before routes can
+            # safely load relationships such as IntegrationState.notion_source.
+            if inspect(db.engine).get_table_names():
+                db.create_all()
+                apply_schema_updates()
 
     return app

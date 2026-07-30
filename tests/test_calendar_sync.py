@@ -83,7 +83,10 @@ def sync_setup(tmp_path):
             integration_id=integration.id,
             encrypted_access_token=encrypt_token("access-token"),
             encrypted_refresh_token=encrypt_token("refresh-token"),
-            access_token_expires_at=FIXED_NOW + timedelta(days=1),
+            # Keep this credential valid for route tests that use the real
+            # wall clock instead of FIXED_NOW. A one-day lifetime made the
+            # suite begin failing as soon as that date passed.
+            access_token_expires_at=FIXED_NOW + timedelta(days=365),
         ))
         db.session.commit()
         ids = {"user": user.id, "integration": integration.id}

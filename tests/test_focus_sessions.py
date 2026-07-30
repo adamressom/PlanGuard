@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -201,6 +202,15 @@ def test_dashboard_exposes_focus_progress_dialog_workflow(focus_setup):
     assert b'step="10"' in response.data
     assert f'data-assignment-id="{ids["assignment"]}"'.encode() in response.data
     assert b'data-assignment-progress="10"' in response.data
+
+
+def test_saving_focus_progress_does_not_show_a_second_confirmation():
+    script = (Path(__file__).parents[1] / "planguard" / "static" / "js" / "focus-timer.js").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Are you finished with this focus session?" not in script
+    assert "await sendAction('end', {reason: 'manual'});" in script
 
 
 def test_paused_focus_shows_resume(focus_setup):

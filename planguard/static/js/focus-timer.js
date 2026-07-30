@@ -208,14 +208,8 @@ if (focusRoot) {
       const data = await request(`/api/assignments/${assignmentId}`, {method: 'PATCH', body: {progress}});
       syncProgressInputs(data.progress);
       refreshDashboard(data.assignments);
-      const finished = window.confirm('Are you finished with this focus session?');
       progressDialog.close();
-      if (finished) {
-        sendAction('end', {reason: 'manual'});
-      } else {
-        if (focusTitle) focusTitle.dataset.assignmentProgress = data.progress;
-        setMessage('Progress saved. Focus session is still running.');
-      }
+      await sendAction('end', {reason: 'manual'});
     } catch (error) {
       setProgressError(error.message);
     }
